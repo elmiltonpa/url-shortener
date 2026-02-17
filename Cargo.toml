@@ -29,6 +29,7 @@ chrono = { version = "0.4", features = ["serde"] }
 dotenvy = "0.15"
 thiserror = "1.0"
 anyhow = "1.0"
+ipnetwork = { version = "0.20", features = ["serde"] }
 
 # Logging
 tracing = "0.1"
