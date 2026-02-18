@@ -41,18 +41,23 @@ The project follows a layered architecture:
 
 ## Roadmap & Progress
 - [x] **Project Discovery**: Analyze structure and dependencies.
-- [x] **Data Models**: Define `UrlModel`, `UrlRequest`, and `UrlResponse`.
-- [x] **Error Handling**: Professional error system with `thiserror` and Axum integration.
-- [ ] **Repository Layer**: Implementation of database interactions (PostgreSQL).
-- [ ] **Business Logic (Services)**:
-    - [ ] Short code generation.
-    - [ ] Redis caching.
-    - [ ] URL validation.
+- [x] **Data Models**: Defined `UrlModel`, `UrlRequest`, and `UrlResponse` in `src/models/url.rs`.
+- [x] **Error Handling**: Implemented centralized `AppError` with `thiserror` and Axum integration in `src/error.rs`.
+- [x] **Repository Layer**: Implemented database interactions (PostgreSQL) in `src/repository/url_repo.rs`, including create, find, and click count incrementing.
+- [x] **Business Logic (Services)**:
+    - [x] **Short code generation (nanoid strategy)**:
+        1. **Alphabet**: Alphanumeric `[0-9a-zA-Z]` (62 chars).
+        2. **Length**: Default to 8 characters.
+        3. **Collision Strategy**: Retries up to 4 times with `nanoid`.
+    - [ ] **Redis caching**: `src/services/cache.rs` is currently a placeholder.
+    - [x] **URL validation**: Implemented in `src/services/validator.rs` (checks format, protocol, and self-referencing).
 - [ ] **API Handlers**:
-    - [ ] `POST /`: Create shortened URL.
-    - [ ] `GET /:code`: Redirect to original URL.
-    - [ ] `GET /stats/:code`: View URL statistics.
-- [ ] **Server Setup**: Wire everything together in `main.rs`.
+    - [x] `POST /`: Create shortened URL (Implemented in `src/handlers/create.rs`).
+    - [x] `GET /:code`: Redirect to original URL (Implemented in `src/handlers/redirect.rs`).
+    - [ ] `GET /stats/:code`: View URL statistics (`src/handlers/stats.rs` is currently a placeholder).
+- [x] **Server Setup**: Wire everything together in `main.rs` with Axum and SQLx.
+- [ ] **Middleware**:
+    - [ ] **Rate Limiting**: `src/middleware/rate_limit.rs` is currently a placeholder.
 
 ## Development Conventions
 - **Asynchronous First:** All I/O operations should be `async` using `tokio`.
@@ -60,6 +65,23 @@ The project follows a layered architecture:
 - **Type Safety:** Leverage Rust's type system and SQLx's compile-time checked queries.
 - **Configuration:** Use environment variables managed via `dotenvy` and the `Config` struct in `src/config.rs`.
 - **Formatting:** Adhere to standard `rustfmt` guidelines.
+
+## Implementation Details
+- **`src/config.rs`**: Environment variable management (`Config` struct) using `dotenvy`.
+- **`src/error.rs`**: Centralized `AppError` enum using `thiserror`. Implements `IntoResponse` for Axum and `is_unique_violation` for SQLx collision detection.
+- **`src/models/url.rs`**: Contains `UrlModel` (DB), `UrlRequest` (DTO), and `UrlResponse` (DTO).
+- **`src/repository/url_repo.rs`**: Database queries using SQLx (`create_url`, `get_url_by_code`, `increment_click_count`).
+- **`src/services/`**:
+    - `generator.rs`: Uses `nanoid!` for short codes.
+    - `validator.rs`: Validates URLs (host, scheme, self-referencing check).
+    - `url_service.rs`: Main business logic (orchestrates creation with retry logic and redirection with async click incrementing).
+    - `cache.rs`: (Placeholder) Planned for Redis.
+- **`src/handlers/`**:
+    - `create.rs`: `create_url` endpoint, handles validation and IP logging.
+    - `redirect.rs`: `redirect` endpoint, uses `resolve_url`.
+    - `stats.rs`: (Placeholder) Planned for URL statistics.
+- **`src/main.rs`**: Application entry point, router configuration (`POST /`, `GET /:code`), state initialization (`AppState`), and server setup.
+- **`src/middleware/rate_limit.rs`**: (Placeholder) Planned for API rate limiting.
 
 ## Project Structure
 ```text
