@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use validator::Validate;
 
+#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct UrlModel {
     pub id: i64,
@@ -15,12 +16,14 @@ pub struct UrlModel {
     pub expires_at: Option<DateTime<Utc>>,
 }
 
+#[allow(dead_code)]
 #[derive(Deserialize, Validate)]
 pub struct UrlRequest {
     #[validate(url)]
     pub original_url: String,
 }
 
+#[allow(dead_code)]
 #[derive(Serialize)]
 pub struct UrlResponse {
     pub short_code: String,
