@@ -1,9 +1,8 @@
 use axum::{
+    Json,
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json,
 };
-use serde_json::json;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -28,6 +27,9 @@ pub enum AppError {
 
     #[error("Internal server error")]
     Internal(#[from] anyhow::Error),
+
+    #[error("The requested URL has expired and is no longer available")]
+    Gone,
 }
 
 impl IntoResponse for AppError {
@@ -45,6 +47,7 @@ impl IntoResponse for AppError {
             AppError::ValidationError(msg) => (StatusCode::BAD_REQUEST, msg),
             AppError::Conflict => (StatusCode::CONFLICT, self.to_string()),
             AppError::RateLimitExceeded => (StatusCode::TOO_MANY_REQUESTS, self.to_string()),
+            AppError::Gone => (StatusCode::GONE, self.to_string()),
             AppError::Internal(_) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "An internal server error occurred".to_string(),
@@ -56,6 +59,19 @@ impl IntoResponse for AppError {
         }));
 
         (status, body).into_response()
+    }
+}
+
+impl AppError {
+    pub fn is_unique_violation(&self) -> bool {
+        match self {
+            // Buscamos específicamente el error de base de datos
+            AppError::DatabaseError(sqlx::Error::Database(db_err)) => {
+                // db_err es un Box<dyn DatabaseError>, que ya tiene el método
+                db_err.is_unique_violation()
+            }
+            _ => false,
+        }
     }
 }
 
