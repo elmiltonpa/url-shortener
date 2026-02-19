@@ -1,6 +1,6 @@
 use crate::{
-    error::AppError,
-    models::url::UrlModel,
+    error::{AppError, AppResult},
+    models::url::{UrlModel, UrlStatsResponse},
     repository::url_repo::UrlRepository,
     services::{generator::CodeGenerator, validator::UrlValidator},
 };
@@ -51,7 +51,13 @@ impl UrlService {
         Err(AppError::Conflict)
     }
 
-    pub async fn resolve_url(&self, code: &str) -> Result<String, AppError> {
+    pub async fn resolve_url(
+        &self,
+        code: &str,
+        user_agent: Option<String>,
+        client_ip: Option<IpNetwork>,
+        referrer: Option<String>,
+    ) -> Result<String, AppError> {
         let model = self.url_repository.get_url_by_code(code).await?;
 
         if let Some(value) = model.expires_at {
@@ -64,9 +70,30 @@ impl UrlService {
         let code_string = code.to_string();
         tokio::spawn(async move {
             let _ = repo_clone.increment_click_count(&code_string).await;
+            let _ = repo_clone
+                .record_click(model.id, user_agent, client_ip, referrer)
+                .await;
         });
 
         Ok(model.original_url)
+    }
+
+    pub async fn get_stats(&self, code: &str, app_domain: &str) -> AppResult<UrlStatsResponse> {
+        let url = self.url_repository.get_url_by_code(code).await?;
+
+        let stats = self.url_repository.get_code_stats(code).await?;
+
+        let short_url = format!("{}/{}", app_domain, url.short_code);
+
+        Ok(UrlStatsResponse {
+            short_code: url.short_code,
+            short_url: short_url,
+            original_url: url.original_url,
+            total_clicks: url.click_count,
+            created_at: url.created_at,
+            expires_at: url.expires_at,
+            stats,
+        })
     }
 }
 
@@ -77,10 +104,7 @@ mod tests {
     use std::time::Duration;
     #[tokio::test]
     async fn test_create_url_integration() {
-        // Usar la DATABASE_URL del entorno
         let db_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-
-        // Configurar el pool con timeouts apropiados
         let pool = PgPoolOptions::new()
             .max_connections(5)
             .acquire_timeout(Duration::from_secs(30))
