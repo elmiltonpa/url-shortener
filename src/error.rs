@@ -65,11 +65,7 @@ impl IntoResponse for AppError {
 impl AppError {
     pub fn is_unique_violation(&self) -> bool {
         match self {
-            // Buscamos específicamente el error de base de datos
-            AppError::DatabaseError(sqlx::Error::Database(db_err)) => {
-                // db_err es un Box<dyn DatabaseError>, que ya tiene el método
-                db_err.is_unique_violation()
-            }
+            AppError::DatabaseError(sqlx::Error::Database(db_err)) => db_err.is_unique_violation(),
             _ => false,
         }
     }

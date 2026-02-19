@@ -12,9 +12,9 @@ use axum::{
 use sqlx::postgres::PgPoolOptions;
 use std::sync::Arc;
 
-struct AppState {
-    service: Arc<services::url_service::UrlService>,
-    config: Arc<config::Config>,
+pub struct AppState {
+    pub service: Arc<services::url_service::UrlService>,
+    pub config: Arc<config::Config>,
 }
 
 #[tokio::main]
@@ -43,6 +43,7 @@ async fn main() {
     let app = Router::new()
         .route("/", post(handlers::create::create_url))
         .route("/:code", get(handlers::redirect::redirect))
+        .route("/stats/:code", get(handlers::stats::get_stats))
         .with_state(state);
 
     let addr = format!("0.0.0.0:{}", config.server_port);

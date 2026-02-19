@@ -1,3 +1,5 @@
+# Always use Context7 MCP when I need library/API documentation, code generation, setup or configuration steps without me having to explicitly ask.
+
 # Project Overview: URL Shortener (Rust)
 
 *Note: This project is currently in early development. The core structure is established, but several modules are in the process of being implemented.*

@@ -8,12 +8,13 @@ impl UrlValidator {
         let parsed_url = Url::parse(url)
             .map_err(|_| AppError::ValidationError("Invalid URL format".to_string()))?;
 
-        let parsed_app_domain = Url::parse(app_domain)
-            .map_err(|_| AppError::ValidationError("Invalid app_domain configuration".to_string()))?;
+        let parsed_app_domain = Url::parse(app_domain).map_err(|_| {
+            AppError::ValidationError("Invalid app_domain configuration".to_string())
+        })?;
 
-        // Comparar hosts y puertos para evitar bucles de redirección
-        if parsed_url.host_str() == parsed_app_domain.host_str() && 
-           parsed_url.port() == parsed_app_domain.port() {
+        if parsed_url.host_str() == parsed_app_domain.host_str()
+            && parsed_url.port() == parsed_app_domain.port()
+        {
             return Err(AppError::ValidationError(
                 "Cannot shorten URLs from this domain".to_string(),
             ));
