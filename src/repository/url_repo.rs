@@ -1,5 +1,5 @@
 use crate::error::{AppError, AppResult};
-use crate::models::url::UrlModel;
+use crate::models::url::{StatModel, UrlModel};
 use chrono::{DateTime, Utc};
 use ipnetwork::IpNetwork;
 use sqlx::{PgPool, query_as};
@@ -81,5 +81,51 @@ impl UrlRepository {
         .await?;
 
         Ok(())
+    }
+
+    pub async fn record_click(
+        &self,
+        url_id: i64,
+        user_agent: Option<String>,
+        ip_address: Option<IpNetwork>,
+        referrer: Option<String>,
+    ) -> AppResult<()> {
+        sqlx::query(
+            r#"
+            INSERT INTO url_analytics (url_id, user_agent, ip_address, referrer)
+            VALUES ($1, $2, $3, $4)
+            "#,
+        )
+        .bind(url_id)
+        .bind(user_agent)
+        .bind(ip_address)
+        .bind(referrer)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    pub async fn get_code_stats(&self, short_code: &str) -> AppResult<Vec<StatModel>> {
+        let stats: Vec<StatModel> = query_as::<_, StatModel>(
+            r#"
+            SELECT
+                ua.id,
+                ua.url_id,
+                ua.user_agent,
+                ua.ip_address,
+                ua.referrer,
+                ua.country_code,
+                ua.created_at
+            FROM url_analytics ua
+            JOIN urls u ON ua.url_id = u.id
+            WHERE u.short_code = $1
+            ORDER BY ua.created_at DESC
+            "#,
+        )
+        .bind(short_code)
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(stats)
     }
 }
