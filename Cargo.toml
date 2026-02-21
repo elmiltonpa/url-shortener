@@ -4,35 +4,49 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+
 # Web framework
-axum = "0.7"
-tokio = { version = "1", features = ["full"] }
-tower = { version = "0.4", features = ["limit"] }
-tower-http = { version = "0.5", features = ["cors", "trace"] }
-tower_governor = "=0.8.0"
-governor = "0.10.4"
+axum = "0.8"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+reqwest = { version = "0.13", features = ["json"] }
+
+# Tower & HTTP middleware
+tower = "0.5"
+tower-http = { version = "0.6", features = ["cors", "trace", "request-id"] }
+
+# Rate limiting
+tower_governor = { version = "0.8", features = ["axum"] }
+governor = "0.10"
 
 # Database
-sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "ipnetwork", "migrate"] }
-redis = { version = "0.24", features = ["tokio-comp", "connection-manager"] }
+sqlx = { version = "0.8", features = [
+    "runtime-tokio-rustls",
+    "postgres",
+    "uuid",
+    "chrono",
+    "migrate",
+    "ipnetwork"
+] }
+
+redis = { version = "0.27", features = ["tokio-comp", "connection-manager"] }
 
 # Serialization & Validation
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-validator = { version = "0.16", features = ["derive"] }
+validator = { version = "0.20", features = ["derive"] }
 
 # IDs
 nanoid = "0.4"
-uuid = { version = "1.6", features = ["v4", "serde"] }
+uuid = { version = "1.7", features = ["v4", "serde"] }
 
 # Utilities
 chrono = { version = "0.4", features = ["serde"] }
 dotenvy = "0.15"
-thiserror = "1.0"
+thiserror = "2.0"
 anyhow = "1.0"
-ipnetwork = { version = "0.20", features = ["serde"] }
+ipnetwork = { version = "0.20.0", features = ["serde"] }
 
-# Logging
+# Logging / Observability
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 

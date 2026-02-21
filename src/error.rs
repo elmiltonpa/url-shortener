@@ -30,6 +30,9 @@ pub enum AppError {
 
     #[error("The requested URL has expired and is no longer available")]
     Gone,
+
+    #[error("URL malicious")]
+    UrlMalicious,
 }
 
 impl IntoResponse for AppError {
@@ -43,6 +46,7 @@ impl IntoResponse for AppError {
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "A cache error occurred".to_string(),
             ),
+            AppError::UrlMalicious => (StatusCode::FORBIDDEN, self.to_string()),
             AppError::NotFound => (StatusCode::NOT_FOUND, self.to_string()),
             AppError::ValidationError(msg) => (StatusCode::BAD_REQUEST, msg),
             AppError::Conflict => (StatusCode::CONFLICT, self.to_string()),
