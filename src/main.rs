@@ -31,6 +31,9 @@ async fn main() {
     let config = config::Config::from_env().expect("No se pudo cargar la config");
     let config = Arc::new(config);
 
+    let cors_layer = middleware::cors::config_cors(&config.app_domain)
+        .expect("No se pudo configurar CORS. APP_DOMAIN inválido.");
+
     let pool = PgPoolOptions::new()
         .max_connections(5)
         .connect(&config.database_url)
@@ -65,6 +68,7 @@ async fn main() {
         .route("/{code}", get(handlers::redirect::redirect))
         .route("/stats/{code}", get(handlers::stats::get_stats))
         .layer(GovernorLayer::new(governor_conf))
+        .layer(cors_layer)
         .with_state(state);
 
     let addr = format!("0.0.0.0:{}", config.server_port);
