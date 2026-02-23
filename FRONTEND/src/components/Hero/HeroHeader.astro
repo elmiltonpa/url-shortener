@@ -1,0 +1,31 @@
+<div class="flex flex-col items-center">
+    <h1
+        class="animate-hero opacity-0 mb-6 text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl lg:text-6xl text-balance"
+    >
+        <span class="text-muted-foreground">Shorten URLs.</span>
+        <br />
+        <span class="text-foreground">Track everything.</span>
+    </h1>
+
+    <p class="animate-hero [animation-delay:200ms] opacity-0 mx-auto mb-10 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg text-balance">
+        High-performance link shortener built for speed. Create, manage, and analyze
+        your links in milliseconds with our powerful, privacy-first analytics.
+    </p>
+</div>
+
+<style>
+    @keyframes fade-in-up {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .animate-hero {
+        animation: fade-in-up 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+</style>

@@ -1,0 +1,13 @@
+---
+import HeroHeader from "./HeroHeader.astro";
+import UrlForm from "./UrlForm.tsx";
+---
+
+<section
+    class="relative flex min-h-[90vh] flex-col items-center justify-center px-6 pt-16"
+>
+    <div class="relative z-10 flex max-w-2xl flex-col items-center text-center">
+        <HeroHeader />
+        <UrlForm client:visible />
+    </div>
+</section>
