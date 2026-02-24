@@ -1,0 +1,28 @@
+---
+import Layout from "./Layout.astro";
+
+interface Props {
+    title?: string;
+}
+
+const { title } = Astro.props;
+---
+
+<Layout title={title}>
+    <main
+        class="relative flex min-h-screen flex-col items-center justify-center px-6 py-12 overflow-hidden"
+    >
+        <div
+            class="absolute top-1/4 -left-20 h-72 w-72 rounded-full bg-primary/5 blur-[120px] pointer-events-none"
+        >
+        </div>
+        <div
+            class="absolute bottom-1/4 -right-20 h-72 w-72 rounded-full bg-primary/5 blur-[120px] pointer-events-none"
+        >
+        </div>
+
+        <div class="relative z-10 w-full flex justify-center">
+            <slot />
+        </div>
+    </main>
+</Layout>

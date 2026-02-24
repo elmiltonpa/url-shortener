@@ -12,6 +12,7 @@
     --color-border: hsl(var(--border));
     --color-input: hsl(var(--input));
     --color-ring: hsl(var(--ring));
+    --color-rust: hsl(var(--rust));
 }
 
 @layer base {
@@ -27,6 +28,7 @@
         --border: 0 0% 89.8%;
         --input: 0 0% 89.8%;
         --ring: 0 0% 3.9%;
+        --rust: 18 91% 55%;
     }
 
     .dark {
@@ -41,6 +43,7 @@
         --border: 0 0% 14.9%;
         --input: 0 0% 14.9%;
         --ring: 0 0% 83.1%;
+        --rust: 18 91% 55%;
     }
 }
 
