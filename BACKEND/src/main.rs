@@ -11,7 +11,7 @@ use axum::{
     routing::{get, post},
 };
 use sqlx::postgres::PgPoolOptions;
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 use tower_governor::GovernorLayer;
 
 pub struct AppState {
@@ -36,6 +36,7 @@ async fn main() {
 
     let pool = PgPoolOptions::new()
         .max_connections(5)
+        .idle_timeout(Some(Duration::from_secs(30)))
         .connect(&config.database_url)
         .await
         .expect("No se pudo conectar a la base de datos");
