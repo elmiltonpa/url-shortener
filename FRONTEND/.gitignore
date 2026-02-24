@@ -1,5 +1,6 @@
 # build output
 dist/
+.vercel/
 
 # generated types
 .astro/
@@ -26,3 +27,8 @@ pnpm-debug.log*
 TASKS.md
 
 client_secret*
+
+# Gemini CLI & Agents
+GEMINI.md
+skills-lock.json
+.agents/
