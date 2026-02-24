@@ -1,17 +1,20 @@
-// @ts-check
-import { defineConfig } from 'astro/config';
+import { defineConfig, envField } from "astro/config";
+import tailwindcss from "@tailwindcss/vite";
+import icon from "astro-icon";
+import vercel from "@astrojs/vercel";
 
-import tailwindcss from '@tailwindcss/vite';
+import vue from "@astrojs/vue";
 
-import icon from 'astro-icon';
-
-import react from '@astrojs/react';
-
-// https://astro.build/config
 export default defineConfig({
-  vite: {
-    plugins: [tailwindcss()]
+  output: "server",
+  adapter: vercel(),
+  env: {
+    schema: {
+      API_URL: envField.string({ context: "server", access: "secret" }),
+    },
   },
-
-  integrations: [icon(), react()]
+  vite: {
+    plugins: [tailwindcss()],
+  },
+  integrations: [icon(), vue()],
 });
