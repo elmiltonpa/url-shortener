@@ -1,21 +1,13 @@
 ---
-import { LinkButton } from "./ui/Button/LinkButton";
+import LinkButton from "./ui/Button/LinkButton.vue";
+import Logo from "./ui/Logo.vue";
 ---
 
 <header
-    class="fixed top-0 left-0 right-0 z-50 border-b border-border/50 bg-card/15"
+    class="fixed top-0 left-0 right-0 z-50 border-b border-border/50 bg-card/15 backdrop-blur-md"
 >
     <div class="container mx-auto flex h-16 items-center justify-between px-6">
-        <a
-            href="/"
-            class="group flex items-center gap-2.5 transition-opacity hover:opacity-90"
-        >
-            <span
-                class="text-xl font-bold tracking-tight text-foreground italic"
-            >
-                Short<span class="text-muted-foreground">.rs</span>
-            </span>
-        </a>
+        <Logo client:load />
 
         <nav class="flex items-center gap-3">
             <LinkButton href="/login" variant="ghost" size="sm">
@@ -25,7 +17,7 @@ import { LinkButton } from "./ui/Button/LinkButton";
                 href="/register"
                 variant="default"
                 size="sm"
-                className="px-5 shadow-sm"
+                class="px-5 shadow-sm"
             >
                 Sign Up
             </LinkButton>
