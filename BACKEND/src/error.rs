@@ -33,6 +33,30 @@ pub enum AppError {
 
     #[error("URL malicious")]
     UrlMalicious,
+
+    #[error("Invalid key")]
+    InvalidKey,
+
+    #[error("Failed to create token")]
+    TokenCreationFailed,
+
+    #[error("Invalid or expired token")]
+    InvalidToken,
+
+    #[error("Invalid password")]
+    InvalidPassword,
+
+    #[error("Token is malformed or has an invalid format")]
+    TokenMalformed,
+
+    #[error("Token has expired")]
+    TokenExpired,
+
+    #[error("Token signature is invalid")]
+    TokenInvalidSignature,
+
+    #[error("Password hash failed")]
+    PasswordHashFailed,
 }
 
 impl IntoResponse for AppError {
@@ -46,6 +70,14 @@ impl IntoResponse for AppError {
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "A cache error occurred".to_string(),
             ),
+            AppError::InvalidToken => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
+            AppError::InvalidKey => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
+            AppError::TokenCreationFailed => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
+            AppError::PasswordHashFailed => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
+            AppError::InvalidPassword => (StatusCode::UNAUTHORIZED, self.to_string()),
+            AppError::TokenExpired => (StatusCode::UNAUTHORIZED, self.to_string()),
+            AppError::TokenInvalidSignature => (StatusCode::UNAUTHORIZED, self.to_string()),
+            AppError::TokenMalformed => (StatusCode::BAD_REQUEST, self.to_string()),
             AppError::UrlMalicious => (StatusCode::FORBIDDEN, self.to_string()),
             AppError::NotFound => (StatusCode::NOT_FOUND, self.to_string()),
             AppError::ValidationError(msg) => (StatusCode::BAD_REQUEST, msg),

@@ -5,6 +5,7 @@ mod middleware;
 mod models;
 mod repository;
 mod services;
+mod utils;
 
 use axum::{
     Router,
