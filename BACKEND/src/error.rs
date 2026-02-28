@@ -43,8 +43,8 @@ pub enum AppError {
     #[error("Invalid or expired token")]
     InvalidToken,
 
-    #[error("Invalid password")]
-    InvalidPassword,
+    #[error("Invalid credentials")]
+    InvalidCredentials,
 
     #[error("Token is malformed or has an invalid format")]
     TokenMalformed,
@@ -57,6 +57,14 @@ pub enum AppError {
 
     #[error("Password hash failed")]
     PasswordHashFailed,
+
+    #[error("Username or email already exists")]
+    UserAlreadyExists,
+
+    #[error(
+        "This account requires external authentication. Please sign in using your social provider."
+    )]
+    ExternalAuthenticationRequired,
 }
 
 impl IntoResponse for AppError {
@@ -70,11 +78,14 @@ impl IntoResponse for AppError {
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "A cache error occurred".to_string(),
             ),
+            AppError::ExternalAuthenticationRequired => {
+                (StatusCode::UNAUTHORIZED, self.to_string())
+            }
             AppError::InvalidToken => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
             AppError::InvalidKey => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
             AppError::TokenCreationFailed => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
             AppError::PasswordHashFailed => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
-            AppError::InvalidPassword => (StatusCode::UNAUTHORIZED, self.to_string()),
+            AppError::InvalidCredentials => (StatusCode::UNAUTHORIZED, self.to_string()),
             AppError::TokenExpired => (StatusCode::UNAUTHORIZED, self.to_string()),
             AppError::TokenInvalidSignature => (StatusCode::UNAUTHORIZED, self.to_string()),
             AppError::TokenMalformed => (StatusCode::BAD_REQUEST, self.to_string()),
@@ -83,6 +94,7 @@ impl IntoResponse for AppError {
             AppError::ValidationError(msg) => (StatusCode::BAD_REQUEST, msg),
             AppError::Conflict => (StatusCode::CONFLICT, self.to_string()),
             AppError::RateLimitExceeded => (StatusCode::TOO_MANY_REQUESTS, self.to_string()),
+            AppError::UserAlreadyExists => (StatusCode::CONFLICT, self.to_string()),
             AppError::Gone => (StatusCode::GONE, self.to_string()),
             AppError::Internal(_) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
