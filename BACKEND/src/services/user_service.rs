@@ -48,15 +48,6 @@ impl UserService {
         email: &str,
         password: &str,
     ) -> AppResult<AuthResponse> {
-        let user_exists = self
-            .user_repository
-            .exists_by_email_or_username(self.user_repository.pool(), email, username)
-            .await?;
-
-        if user_exists {
-            return Err(AppError::UserAlreadyExists);
-        };
-
         let password_hash = hash_password(password)?;
 
         let user_created = self
@@ -68,7 +59,15 @@ impl UserService {
                 Some(&password_hash),
                 None,
             )
-            .await?;
+            .await;
+
+        let user_created = match user_created {
+            Ok(user) => user,
+            Err(ref e) if e.is_unique_violation() => {
+                return Err(AppError::UserAlreadyExists);
+            }
+            Err(e) => return Err(e),
+        };
 
         self.generate_auth_response(user_created).await
     }
