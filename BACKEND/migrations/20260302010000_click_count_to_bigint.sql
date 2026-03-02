@@ -1,0 +1,1 @@
+ALTER TABLE urls ALTER COLUMN click_count TYPE BIGINT;

@@ -10,7 +10,7 @@ pub struct UrlModel {
     pub id: i64,
     pub original_url: String,
     pub short_code: String,
-    pub click_count: i32,
+    pub click_count: i64,
     pub created_by_ip: Option<IpNetwork>,
     pub user_id: Option<Uuid>,
     pub created_at: DateTime<Utc>,
@@ -19,7 +19,10 @@ pub struct UrlModel {
 
 #[derive(Deserialize, Validate)]
 pub struct UrlRequest {
-    #[validate(url)]
+    #[validate(
+        url,
+        length(max = 2048, message = "URL must not exceed 2048 characters")
+    )]
     pub original_url: String,
 }
 
@@ -82,7 +85,7 @@ pub struct UrlStatsResponse {
     pub short_code: String,
     pub short_url: String,
     pub original_url: String,
-    pub total_clicks: i32,
+    pub total_clicks: i64,
     pub created_at: DateTime<Utc>,
     pub expires_at: Option<DateTime<Utc>>,
     pub pagination: PaginationMeta,
