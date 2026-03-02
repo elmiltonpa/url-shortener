@@ -7,7 +7,7 @@ edition = "2024"
 
 # Web framework
 axum = "0.8"
-tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal"] }
 reqwest = { version = "0.13", features = ["json"] }
 
 # Tower & HTTP middleware
@@ -30,7 +30,7 @@ sqlx = { version = "0.8", features = [
 
 redis = { version = "0.27", features = ["tokio-comp", "connection-manager"] }
 
-# Criptografía y Seguridad
+# Criptography & Security
 argon2 = "0.5"
 pasetors = "0.7"
 rand = "0.10"
