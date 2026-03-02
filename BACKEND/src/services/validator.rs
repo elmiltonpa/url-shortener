@@ -1,5 +1,5 @@
 use crate::error::AppError;
-use std::net::IpAddr;
+use std::net::{IpAddr, Ipv6Addr};
 use url::Url;
 
 pub struct UrlValidator;
@@ -70,10 +70,23 @@ impl UrlValidator {
                     || ipv4.is_unspecified()
             }
             IpAddr::V6(ipv6) => {
+                if let Some(mapped_ipv4) = ipv6.to_ipv4_mapped() {
+                    return Self::is_private_ip(IpAddr::V4(mapped_ipv4));
+                }
+
                 ipv6.is_loopback()
                     || ipv6.is_unspecified()
-                    || (ipv6.segments()[0] & 0xfe00) == 0xfc00
+                    || Self::is_ipv6_unique_local(&ipv6)
+                    || Self::is_ipv6_link_local(&ipv6)
             }
         }
+    }
+
+    fn is_ipv6_unique_local(ipv6: &Ipv6Addr) -> bool {
+        (ipv6.segments()[0] & 0xfe00) == 0xfc00
+    }
+
+    fn is_ipv6_link_local(ipv6: &Ipv6Addr) -> bool {
+        (ipv6.segments()[0] & 0xffc0) == 0xfe80
     }
 }
