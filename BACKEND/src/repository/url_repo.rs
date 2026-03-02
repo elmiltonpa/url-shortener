@@ -178,4 +178,25 @@ impl UrlRepository {
         .await?;
         Ok(row.0)
     }
+
+    pub async fn delete_expired_urls(&self) -> AppResult<u64> {
+        let result = sqlx::query(
+            r#"
+            WITH expired AS (
+                SELECT id FROM urls
+                WHERE expires_at IS NOT NULL AND expires_at < NOW()
+            ),
+            deleted_analytics AS (
+                DELETE FROM url_analytics
+                WHERE url_id IN (SELECT id FROM expired)
+            )
+            DELETE FROM urls
+            WHERE id IN (SELECT id FROM expired)
+            "#,
+        )
+        .execute(self.pool())
+        .await?;
+
+        Ok(result.rows_affected())
+    }
 }
