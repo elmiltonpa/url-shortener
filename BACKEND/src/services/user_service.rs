@@ -9,8 +9,8 @@ use crate::{
 };
 
 pub struct UserService {
-    pub user_repository: UserRepository,
-    pub jwt_secret: String,
+    user_repository: UserRepository,
+    jwt_secret: String,
 }
 
 impl UserService {
@@ -24,7 +24,7 @@ impl UserService {
     pub async fn login(&self, email: &str, password: &str) -> AppResult<AuthResponse> {
         let user = self
             .user_repository
-            .get_user_by_email(email)
+            .get_user_by_email(self.user_repository.pool(), email)
             .await?
             .ok_or(AppError::InvalidCredentials)?;
 
@@ -50,7 +50,7 @@ impl UserService {
     ) -> AppResult<AuthResponse> {
         let user_exists = self
             .user_repository
-            .exists_by_email_or_username(email, username)
+            .exists_by_email_or_username(self.user_repository.pool(), email, username)
             .await?;
 
         if user_exists {
@@ -61,7 +61,13 @@ impl UserService {
 
         let user_created = self
             .user_repository
-            .create_user(username, email, Some(&password_hash), None)
+            .create_user(
+                self.user_repository.pool(),
+                username,
+                email,
+                Some(&password_hash),
+                None,
+            )
             .await?;
 
         self.generate_auth_response(user_created).await
@@ -73,22 +79,28 @@ impl UserService {
         email: &str,
         username: &str,
     ) -> AppResult<AuthResponse> {
+        let mut tx = self.user_repository.pool().begin().await?;
+
         let user = if let Some(user) = self
             .user_repository
-            .get_user_by_google_id(google_id)
+            .get_user_by_google_id(&mut *tx, google_id)
             .await?
         {
             user
-        } else if let Some(user) = self.user_repository.get_user_by_email(email).await? {
+        } else if let Some(user) = self
+            .user_repository
+            .get_user_by_email(&mut *tx, email)
+            .await?
+        {
             self.user_repository
-                .link_google_id(user.id, google_id)
+                .link_google_id(&mut *tx, user.id, google_id)
                 .await?
         } else {
             let mut final_username = username.to_string();
 
             if self
                 .user_repository
-                .exists_by_email_or_username("", &final_username)
+                .exists_by_email_or_username(&mut *tx, "", &final_username)
                 .await?
             {
                 let suffix = &nanoid::nanoid!(4);
@@ -96,9 +108,10 @@ impl UserService {
             }
 
             self.user_repository
-                .create_user(&final_username, email, None, Some(google_id))
+                .create_user(&mut *tx, &final_username, email, None, Some(google_id))
                 .await?
         };
+        tx.commit().await?;
 
         self.generate_auth_response(user).await
     }

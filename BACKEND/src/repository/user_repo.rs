@@ -1,8 +1,5 @@
-use crate::{
-    error::{AppError, AppResult},
-    models::user::UserModel,
-};
-use sqlx::{PgPool, query_as, query_scalar};
+use crate::{error::AppResult, models::user::UserModel};
+use sqlx::{Executor, PgPool, Postgres, query_as, query_scalar};
 use uuid::Uuid;
 
 #[derive(Clone)]
@@ -15,13 +12,21 @@ impl UserRepository {
         Self { pool }
     }
 
-    pub async fn create_user(
+    pub fn pool(&self) -> &PgPool {
+        &self.pool
+    }
+
+    pub async fn create_user<'a, E>(
         &self,
+        executor: E,
         username: &str,
         email: &str,
         password_hash: Option<&str>,
         google_id: Option<&str>,
-    ) -> AppResult<UserModel> {
+    ) -> AppResult<UserModel>
+    where
+        E: Executor<'a, Database = Postgres>,
+    {
         let user = query_as::<_, UserModel>(
             r#"
             INSERT INTO users (username, email, password_hash, google_id)
@@ -33,13 +38,20 @@ impl UserRepository {
         .bind(email)
         .bind(password_hash)
         .bind(google_id)
-        .fetch_one(&self.pool)
+        .fetch_one(executor)
         .await?;
 
         Ok(user)
     }
 
-    pub async fn get_user_by_email(&self, email: &str) -> AppResult<Option<UserModel>> {
+    pub async fn get_user_by_email<'a, E>(
+        &self,
+        executor: E,
+        email: &str,
+    ) -> AppResult<Option<UserModel>>
+    where
+        E: Executor<'a, Database = Postgres>,
+    {
         let user = query_as::<_, UserModel>(
             r#"
             SELECT id, email, username, password_hash, google_id, created_at
@@ -48,13 +60,20 @@ impl UserRepository {
             "#,
         )
         .bind(email)
-        .fetch_optional(&self.pool)
+        .fetch_optional(executor)
         .await?;
 
         Ok(user)
     }
 
-    pub async fn get_user_by_google_id(&self, google_id: &str) -> AppResult<Option<UserModel>> {
+    pub async fn get_user_by_google_id<'a, E>(
+        &self,
+        executor: E,
+        google_id: &str,
+    ) -> AppResult<Option<UserModel>>
+    where
+        E: Executor<'a, Database = Postgres>,
+    {
         let user = query_as::<_, UserModel>(
             r#"
             SELECT id, email, username, password_hash, google_id, created_at
@@ -63,13 +82,20 @@ impl UserRepository {
             "#,
         )
         .bind(google_id)
-        .fetch_optional(&self.pool)
+        .fetch_optional(executor)
         .await?;
 
         Ok(user)
     }
 
-    pub async fn get_user_by_id(&self, user_id: Uuid) -> AppResult<Option<UserModel>> {
+    pub async fn get_user_by_id<'a, E>(
+        &self,
+        executor: E,
+        user_id: Uuid,
+    ) -> AppResult<Option<UserModel>>
+    where
+        E: Executor<'a, Database = Postgres>,
+    {
         let user = query_as::<_, UserModel>(
             r#"
             SELECT id, email, username, password_hash, google_id, created_at
@@ -78,17 +104,21 @@ impl UserRepository {
             "#,
         )
         .bind(user_id)
-        .fetch_optional(&self.pool)
+        .fetch_optional(executor)
         .await?;
 
         Ok(user)
     }
 
-    pub async fn exists_by_email_or_username(
+    pub async fn exists_by_email_or_username<'a, E>(
         &self,
+        executor: E,
         email: &str,
         username: &str,
-    ) -> AppResult<bool> {
+    ) -> AppResult<bool>
+    where
+        E: Executor<'a, Database = Postgres>,
+    {
         let exists = query_scalar::<_, bool>(
             r#"
             SELECT EXISTS(
@@ -99,13 +129,21 @@ impl UserRepository {
         )
         .bind(email)
         .bind(username)
-        .fetch_one(&self.pool)
+        .fetch_one(executor)
         .await?;
 
         Ok(exists)
     }
 
-    pub async fn link_google_id(&self, user_id: Uuid, google_id: &str) -> AppResult<UserModel> {
+    pub async fn link_google_id<'a, E>(
+        &self,
+        executor: E,
+        user_id: Uuid,
+        google_id: &str,
+    ) -> AppResult<UserModel>
+    where
+        E: Executor<'a, Database = Postgres>,
+    {
         let user = query_as::<_, UserModel>(
             r#"
             UPDATE users
@@ -116,7 +154,7 @@ impl UserRepository {
         )
         .bind(user_id)
         .bind(google_id)
-        .fetch_one(&self.pool)
+        .fetch_one(executor)
         .await?;
 
         Ok(user)

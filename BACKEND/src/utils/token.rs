@@ -13,8 +13,11 @@ pub fn create_token(user_id: &str, secret_key: &[u8]) -> Result<String, AppError
     claims
         .add_additional("user_id", user_id)
         .map_err(|_| AppError::TokenCreationFailed)?;
+    let now = chrono::Utc::now();
+    let expiration = now + chrono::Duration::hours(24);
+
     claims
-        .expiration("2026-02-27T00:00:00Z")
+        .expiration(&expiration.to_rfc3339())
         .map_err(|_| AppError::TokenCreationFailed)?;
 
     local::encrypt(&sk, &claims, None, Some(b"implicit assertion"))
@@ -42,5 +45,8 @@ pub fn verify_token(token: &str, secret_key: &[u8]) -> Result<Claims, AppError> 
         }
     })?;
 
-    Ok(trusted.payload_claims().unwrap().clone())
+    trusted
+        .payload_claims()
+        .cloned()
+        .ok_or(AppError::TokenMalformed)
 }
