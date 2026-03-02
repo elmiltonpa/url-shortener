@@ -2,6 +2,7 @@ use chrono::{DateTime, Utc};
 use ipnetwork::IpNetwork;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
+use uuid::Uuid;
 use validator::Validate;
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
@@ -11,6 +12,7 @@ pub struct UrlModel {
     pub short_code: String,
     pub click_count: i32,
     pub created_by_ip: Option<IpNetwork>,
+    pub user_id: Option<Uuid>,
     pub created_at: DateTime<Utc>,
     pub expires_at: Option<DateTime<Utc>>,
 }
@@ -25,7 +27,7 @@ pub struct UrlRequest {
 pub struct UrlResponse {
     pub short_code: String,
     pub original_url: String,
-    pub short_url: String, //URL COMPLETA
+    pub short_url: String,
     pub created_at: DateTime<Utc>,
     pub expires_at: Option<DateTime<Utc>>,
 }
@@ -41,6 +43,40 @@ pub struct StatModel {
     pub created_at: DateTime<Utc>,
 }
 
+#[derive(Deserialize)]
+pub struct StatsQuery {
+    pub page: Option<i64>,
+    pub per_page: Option<i64>,
+}
+
+impl StatsQuery {
+    const DEFAULT_PAGE: i64 = 1;
+    const DEFAULT_PER_PAGE: i64 = 20;
+    const MAX_PER_PAGE: i64 = 100;
+
+    pub fn page(&self) -> i64 {
+        self.page.unwrap_or(Self::DEFAULT_PAGE).max(1)
+    }
+
+    pub fn per_page(&self) -> i64 {
+        self.per_page
+            .unwrap_or(Self::DEFAULT_PER_PAGE)
+            .clamp(1, Self::MAX_PER_PAGE)
+    }
+
+    pub fn offset(&self) -> i64 {
+        (self.page() - 1) * self.per_page()
+    }
+}
+
+#[derive(Serialize)]
+pub struct PaginationMeta {
+    pub page: i64,
+    pub per_page: i64,
+    pub total_records: i64,
+    pub total_pages: i64,
+}
+
 #[derive(Serialize)]
 pub struct UrlStatsResponse {
     pub short_code: String,
@@ -49,5 +85,6 @@ pub struct UrlStatsResponse {
     pub total_clicks: i32,
     pub created_at: DateTime<Utc>,
     pub expires_at: Option<DateTime<Utc>>,
+    pub pagination: PaginationMeta,
     pub stats: Vec<StatModel>,
 }

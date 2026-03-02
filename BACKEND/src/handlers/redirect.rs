@@ -1,4 +1,4 @@
-use crate::{AppState, error::AppResult};
+use crate::{error::AppResult, state::AppState};
 use axum::{
     extract::{ConnectInfo, Path, State},
     http::HeaderMap,
@@ -27,5 +27,5 @@ pub async fn redirect(
         .url_service
         .resolve_url(&code, user_agent, ip_address, referrer)
         .await?;
-    Ok(Redirect::temporary(&resolve_url))
+    Ok(Redirect::permanent(&resolve_url))
 }

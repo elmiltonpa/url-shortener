@@ -1,6 +1,6 @@
 use crate::{
     error::{AppError, AppResult},
-    models::url::{UrlModel, UrlStatsResponse},
+    models::url::{PaginationMeta, UrlModel, UrlStatsResponse},
     repository::url_repo::UrlRepository,
     services::{
         generator::CodeGenerator, safe_browsing::SafeBrowsingService, validator::UrlValidator,
@@ -9,11 +9,12 @@ use crate::{
 use chrono::{Duration, Utc};
 use ipnetwork::IpNetwork;
 use std::sync::Arc;
+use uuid::Uuid;
 
 pub struct UrlService {
-    pub url_repository: UrlRepository,
-    pub code_generator: CodeGenerator,
-    pub safe_browsing: Arc<SafeBrowsingService>,
+    url_repository: UrlRepository,
+    code_generator: CodeGenerator,
+    safe_browsing: Arc<SafeBrowsingService>,
 }
 
 impl UrlService {
@@ -34,6 +35,7 @@ impl UrlService {
         url: &str,
         app_domain: &str,
         client_ip: Option<IpNetwork>,
+        user_id: Option<Uuid>,
     ) -> Result<UrlModel, AppError> {
         UrlValidator::validate(url, app_domain)?;
 
@@ -45,7 +47,14 @@ impl UrlService {
             let new_short_code = self.code_generator.generate();
             let create_url = self
                 .url_repository
-                .create_url(url, &new_short_code, expires_at, client_ip)
+                .create_url(
+                    self.url_repository.pool(),
+                    url,
+                    &new_short_code,
+                    expires_at,
+                    client_ip,
+                    user_id,
+                )
                 .await;
             match create_url {
                 Ok(model) => return Ok(model),
@@ -70,7 +79,10 @@ impl UrlService {
         client_ip: Option<IpNetwork>,
         referrer: Option<String>,
     ) -> Result<String, AppError> {
-        let model = self.url_repository.get_url_by_code(code).await?;
+        let model = self
+            .url_repository
+            .get_url_by_code(self.url_repository.pool(), code)
+            .await?;
 
         if let Some(value) = model.expires_at {
             if value < Utc::now() {
@@ -80,58 +92,74 @@ impl UrlService {
 
         let repo_clone = self.url_repository.clone();
         let code_string = code.to_string();
+        let model_id = model.id;
+
         tokio::spawn(async move {
-            let _ = repo_clone.increment_click_count(&code_string).await;
-            let _ = repo_clone
-                .record_click(model.id, user_agent, client_ip, referrer)
-                .await;
+            if let Err(e) = repo_clone
+                .increment_click_count(repo_clone.pool(), &code_string)
+                .await
+            {
+                tracing::error!("Failed to increment click count for {}: {}", code_string, e);
+            }
+            if let Err(e) = repo_clone
+                .record_click(repo_clone.pool(), model_id, user_agent, client_ip, referrer)
+                .await
+            {
+                tracing::error!(
+                    "Failed to record click analytics for {}: {}",
+                    code_string,
+                    e
+                );
+            }
         });
 
         Ok(model.original_url)
     }
 
-    pub async fn get_stats(&self, code: &str, app_domain: &str) -> AppResult<UrlStatsResponse> {
-        let url = self.url_repository.get_url_by_code(code).await?;
+    pub async fn get_stats(
+        &self,
+        code: &str,
+        app_domain: &str,
+        limit: i64,
+        offset: i64,
+        caller_id: Uuid,
+    ) -> AppResult<UrlStatsResponse> {
+        let url = self
+            .url_repository
+            .get_url_by_code(self.url_repository.pool(), code)
+            .await?;
 
-        let stats = self.url_repository.get_code_stats(code).await?;
+        if let Some(owner_id) = url.user_id {
+            if owner_id != caller_id {
+                return Err(AppError::Forbidden);
+            }
+        }
+
+        let total_records = self.url_repository.count_stats(code).await?;
+
+        let stats = self
+            .url_repository
+            .get_code_stats(self.url_repository.pool(), code, limit, offset)
+            .await?;
 
         let short_url = format!("{}/{}", app_domain, url.short_code);
+        let total_pages = (total_records + limit - 1) / limit;
+        let current_page = (offset / limit) + 1;
 
         Ok(UrlStatsResponse {
             short_code: url.short_code,
-            short_url: short_url,
+            short_url,
             original_url: url.original_url,
             total_clicks: url.click_count,
             created_at: url.created_at,
             expires_at: url.expires_at,
+            pagination: PaginationMeta {
+                page: current_page,
+                per_page: limit,
+                total_records,
+                total_pages,
+            },
             stats,
         })
     }
 }
-
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use sqlx::postgres::PgPoolOptions;
-//     use std::time::Duration;
-//     #[tokio::test]
-//     async fn test_create_url_integration() {
-//         let db_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-//         let pool = PgPoolOptions::new()
-//             .max_connections(5)
-//             .acquire_timeout(Duration::from_secs(30))
-//             .connect(&db_url)
-//             .await
-//             .unwrap();
-//         let repo = UrlRepository::new(pool);
-//         let generator = CodeGenerator::new(1, "123abc");
-//         let service = UrlService::new(repo, generator);
-//         let result = service
-//             .shorten_url("https://google.com", "http://localhost", None)
-//             .await;
-//         assert!(result.is_ok());
-//         let model = result.unwrap();
-//         assert_eq!(model.original_url, "https://google.com");
-//         println!("Short code generado: {}", model.short_code);
-//     }
-// }

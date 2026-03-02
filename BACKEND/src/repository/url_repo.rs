@@ -2,7 +2,8 @@ use crate::error::{AppError, AppResult};
 use crate::models::url::{StatModel, UrlModel};
 use chrono::{DateTime, Utc};
 use ipnetwork::IpNetwork;
-use sqlx::{PgPool, query_as};
+use sqlx::{Executor, PgPool, Postgres, query_as};
+use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct UrlRepository {
@@ -14,23 +15,33 @@ impl UrlRepository {
         Self { pool }
     }
 
-    pub async fn create_url(
+    pub fn pool(&self) -> &PgPool {
+        &self.pool
+    }
+
+    pub async fn create_url<'a, E>(
         &self,
+        executor: E,
         original_url: &str,
         short_code: &str,
         expires_at: Option<DateTime<Utc>>,
         created_by_ip: Option<IpNetwork>,
-    ) -> AppResult<UrlModel> {
+        user_id: Option<Uuid>,
+    ) -> AppResult<UrlModel>
+    where
+        E: Executor<'a, Database = Postgres>,
+    {
         let url: UrlModel = query_as::<_, UrlModel>(
             r#"
-            INSERT INTO urls (original_url, short_code, created_by_ip, expires_at)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO urls (original_url, short_code, created_by_ip, expires_at, user_id)
+            VALUES ($1, $2, $3, $4, $5)
             RETURNING
                 id,
                 original_url,
                 short_code,
                 click_count,
                 created_by_ip,
+                user_id,
                 created_at,
                 expires_at
             "#,
@@ -39,13 +50,17 @@ impl UrlRepository {
         .bind(short_code)
         .bind(created_by_ip)
         .bind(expires_at)
-        .fetch_one(&self.pool)
+        .bind(user_id)
+        .fetch_one(executor)
         .await?;
 
         Ok(url)
     }
 
-    pub async fn get_url_by_code(&self, short_code: &str) -> AppResult<UrlModel> {
+    pub async fn get_url_by_code<'a, E>(&self, executor: E, short_code: &str) -> AppResult<UrlModel>
+    where
+        E: Executor<'a, Database = Postgres>,
+    {
         let url: UrlModel = query_as::<_, UrlModel>(
             r#"
             SELECT
@@ -54,6 +69,7 @@ impl UrlRepository {
                 short_code,
                 click_count,
                 created_by_ip,
+                user_id,
                 created_at,
                 expires_at
             FROM urls
@@ -61,14 +77,17 @@ impl UrlRepository {
             "#,
         )
         .bind(short_code)
-        .fetch_optional(&self.pool)
+        .fetch_optional(executor)
         .await?
         .ok_or(AppError::NotFound)?;
 
         Ok(url)
     }
 
-    pub async fn increment_click_count(&self, short_code: &str) -> AppResult<()> {
+    pub async fn increment_click_count<'a, E>(&self, executor: E, short_code: &str) -> AppResult<()>
+    where
+        E: Executor<'a, Database = Postgres>,
+    {
         sqlx::query(
             r#"
             UPDATE urls
@@ -77,19 +96,23 @@ impl UrlRepository {
             "#,
         )
         .bind(short_code)
-        .execute(&self.pool)
+        .execute(executor)
         .await?;
 
         Ok(())
     }
 
-    pub async fn record_click(
+    pub async fn record_click<'a, E>(
         &self,
+        executor: E,
         url_id: i64,
         user_agent: Option<String>,
         ip_address: Option<IpNetwork>,
         referrer: Option<String>,
-    ) -> AppResult<()> {
+    ) -> AppResult<()>
+    where
+        E: Executor<'a, Database = Postgres>,
+    {
         sqlx::query(
             r#"
             INSERT INTO url_analytics (url_id, user_agent, ip_address, referrer)
@@ -100,13 +123,22 @@ impl UrlRepository {
         .bind(user_agent)
         .bind(ip_address)
         .bind(referrer)
-        .execute(&self.pool)
+        .execute(executor)
         .await?;
 
         Ok(())
     }
 
-    pub async fn get_code_stats(&self, short_code: &str) -> AppResult<Vec<StatModel>> {
+    pub async fn get_code_stats<'a, E>(
+        &self,
+        executor: E,
+        short_code: &str,
+        limit: i64,
+        offset: i64,
+    ) -> AppResult<Vec<StatModel>>
+    where
+        E: Executor<'a, Database = Postgres>,
+    {
         let stats: Vec<StatModel> = query_as::<_, StatModel>(
             r#"
             SELECT
@@ -121,11 +153,29 @@ impl UrlRepository {
             JOIN urls u ON ua.url_id = u.id
             WHERE u.short_code = $1
             ORDER BY ua.created_at DESC
+            LIMIT $2 OFFSET $3
             "#,
         )
         .bind(short_code)
-        .fetch_all(&self.pool)
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(executor)
         .await?;
         Ok(stats)
+    }
+
+    pub async fn count_stats(&self, short_code: &str) -> AppResult<i64> {
+        let row: (i64,) = sqlx::query_as(
+            r#"
+            SELECT COUNT(*)
+            FROM url_analytics ua
+            JOIN urls u ON ua.url_id = u.id
+            WHERE u.short_code = $1
+            "#,
+        )
+        .bind(short_code)
+        .fetch_one(self.pool())
+        .await?;
+        Ok(row.0)
     }
 }
