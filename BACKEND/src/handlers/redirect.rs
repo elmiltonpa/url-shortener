@@ -27,5 +27,5 @@ pub async fn redirect(
         .url_service
         .resolve_url(&code, user_agent, ip_address, referrer)
         .await?;
-    Ok(Redirect::permanent(&resolve_url))
+    Ok(Redirect::temporary(&resolve_url))
 }
