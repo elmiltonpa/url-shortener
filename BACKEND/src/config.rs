@@ -7,6 +7,7 @@ pub struct Config {
     pub redis_url: String,
     pub safe_browsing_api_key: String,
     pub server_port: u16,
+    pub jwt_secret: String,
 }
 
 impl Config {
@@ -21,6 +22,7 @@ impl Config {
         let server_port = std::env::var("SERVER_PORT")
             .unwrap_or_else(|_| "8080".to_string())
             .parse()?;
+        let jwt_secret = std::env::var("JWT_SECRET")?;
 
         Ok(Self {
             safe_browsing_api_key,
@@ -28,6 +30,7 @@ impl Config {
             app_domain,
             redis_url,
             server_port,
+            jwt_secret,
         })
     }
 }

@@ -28,6 +28,9 @@ pub enum AppError {
     #[error("Internal server error")]
     Internal(#[from] anyhow::Error),
 
+    #[error("HTTP error: {0}")]
+    HttpError(#[from] reqwest::Error),
+
     #[error("The requested URL has expired and is no longer available")]
     Gone,
 
@@ -99,6 +102,10 @@ impl IntoResponse for AppError {
             AppError::Internal(_) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "An internal server error occurred".to_string(),
+            ),
+            AppError::HttpError(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "An error occurred with an external service".to_string(),
             ),
         };
 
