@@ -18,6 +18,7 @@ use sqlx::postgres::PgPoolOptions;
 use std::{sync::Arc, time::Duration};
 use tower_governor::GovernorLayer;
 use tower_http::{
+    limit::RequestBodyLimitLayer,
     request_id::{MakeRequestUuid, PropagateRequestIdLayer, SetRequestIdLayer},
     trace::TraceLayer,
 };
@@ -39,7 +40,8 @@ async fn main() {
         .expect("Failed to configure CORS. Invalid APP_DOMAIN.");
 
     let pool = PgPoolOptions::new()
-        .max_connections(5)
+        .max_connections(20)
+        .acquire_timeout(Duration::from_secs(3))
         .idle_timeout(Some(Duration::from_secs(30)))
         .connect(&config.database_url)
         .await
@@ -82,6 +84,7 @@ async fn main() {
     let google_service = Arc::new(google_service);
 
     let state = Arc::new(AppState {
+        pool: pool.clone(),
         url_service,
         user_service,
         google_service,
@@ -106,7 +109,9 @@ async fn main() {
         .route("/auth/login", post(handlers::auth::login))
         .route("/auth/google", post(handlers::auth::google_auth))
         .layer(GovernorLayer::new(governor_conf))
+        .route("/health", get(handlers::health::health_check))
         .layer(cors_layer)
+        .layer(RequestBodyLimitLayer::new(1_048_576)) // 1 MB global body limit
         .layer(PropagateRequestIdLayer::new(x_request_id.clone()))
         .layer(
             TraceLayer::new_for_http()
@@ -139,6 +144,24 @@ async fn main() {
 
     let addr = format!("0.0.0.0:{}", config.server_port);
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
+
+    // Background job: clean expired URLs every hour
+    let cleanup_repo = repository::url_repo::UrlRepository::new(pool.clone());
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(Duration::from_secs(3600));
+        loop {
+            interval.tick().await;
+            match cleanup_repo.delete_expired_urls().await {
+                Ok(count) if count > 0 => {
+                    tracing::info!("Cleaned up {} expired URLs and their analytics", count);
+                }
+                Ok(_) => {}
+                Err(e) => {
+                    tracing::error!("Failed to clean up expired URLs: {}", e);
+                }
+            }
+        }
+    });
 
     tracing::info!("Server running on http://{}", addr);
 

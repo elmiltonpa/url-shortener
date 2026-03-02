@@ -12,7 +12,7 @@ reqwest = { version = "0.13", features = ["json"] }
 
 # Tower & HTTP middleware
 tower = "0.5"
-tower-http = { version = "0.6", features = ["cors", "trace", "request-id"] }
+tower-http = { version = "0.6", features = ["cors", "trace", "request-id", "limit"] }
 
 # Rate limiting
 tower_governor = { version = "0.8", features = ["axum"] }
