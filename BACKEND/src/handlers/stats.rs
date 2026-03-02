@@ -12,7 +12,7 @@ pub async fn get_stats(
     Path(code): Path<String>,
 ) -> AppResult<impl IntoResponse> {
     let stats = state
-        .service
+        .url_service
         .get_stats(&code, &state.config.app_domain)
         .await?;
 

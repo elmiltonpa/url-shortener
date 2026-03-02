@@ -25,7 +25,7 @@ pub async fn create_url(
 
     let client_ip = Some(addr.ip().into());
     let url_model = state
-        .service
+        .url_service
         .shorten_url(&payload.original_url, &state.config.app_domain, client_ip)
         .await?;
     let short_url = format!("{}/{}", state.config.app_domain, url_model.short_code);

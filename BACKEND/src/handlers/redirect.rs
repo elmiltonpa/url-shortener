@@ -24,7 +24,7 @@ pub async fn redirect(
 
     let ip_address = Some(addr.ip().into());
     let resolve_url = state
-        .service
+        .url_service
         .resolve_url(&code, user_agent, ip_address, referrer)
         .await?;
     Ok(Redirect::temporary(&resolve_url))

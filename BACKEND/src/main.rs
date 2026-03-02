@@ -16,7 +16,8 @@ use std::{sync::Arc, time::Duration};
 use tower_governor::GovernorLayer;
 
 pub struct AppState {
-    pub service: Arc<services::url_service::UrlService>,
+    pub url_service: Arc<services::url_service::UrlService>,
+    pub user_service: Arc<services::user_service::UserService>,
     pub config: Arc<config::Config>,
 }
 
@@ -48,18 +49,25 @@ async fn main() {
         .expect("No se pudo crear el cliente HTTP");
 
     const ALPHABET: &str = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-    let repository = repository::url_repo::UrlRepository::new(pool);
+    let url_repository = repository::url_repo::UrlRepository::new(pool.clone());
+    let user_repository = repository::user_repo::UserRepository::new(pool.clone());
     let generator = services::generator::CodeGenerator::new(8, ALPHABET);
     let safe_browsing = Arc::new(services::safe_browsing::SafeBrowsingService::new(
         http_client,
         config.safe_browsing_api_key.clone(),
     ));
 
-    let service = services::url_service::UrlService::new(repository, generator, safe_browsing);
-    let service = Arc::new(service);
+    let url_service =
+        services::url_service::UrlService::new(url_repository, generator, safe_browsing);
+    let url_service = Arc::new(url_service);
+
+    let user_service =
+        services::user_service::UserService::new(user_repository, config.jwt_secret.clone());
+    let user_service = Arc::new(user_service);
 
     let state = Arc::new(AppState {
-        service,
+        url_service,
+        user_service,
         config: config.clone(),
     });
 
