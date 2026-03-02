@@ -15,10 +15,7 @@ impl SafeBrowsingService {
     }
 
     pub async fn check_url(&self, url_to_check: &str) -> Result<(), AppError> {
-        let api_url = format!(
-            "https://safebrowsing.googleapis.com/v4/threatMatches:find?key={}",
-            self.api_key
-        );
+        let api_url = "https://safebrowsing.googleapis.com/v4/threatMatches:find";
 
         let payload = SafeBrowsingRequest {
             client: ClientInfo {
@@ -42,6 +39,7 @@ impl SafeBrowsingService {
         let response = self
             .client
             .post(api_url)
+            .header("x-goog-api-key", &self.api_key)
             .json(&payload)
             .send()
             .await
