@@ -93,6 +93,8 @@ impl UrlService {
         let repo_clone = self.url_repository.clone();
         let code_string = code.to_string();
         let model_id = model.id;
+        let user_agent = Self::truncate(user_agent, 512);
+        let referrer = Self::truncate(referrer, 2048);
 
         tokio::spawn(async move {
             let mut tx = match repo_clone.pool().begin().await {
@@ -180,6 +182,16 @@ impl UrlService {
                 total_pages,
             },
             stats,
+        })
+    }
+
+    fn truncate(value: Option<String>, max_len: usize) -> Option<String> {
+        value.map(|s| {
+            if s.len() > max_len {
+                s[..max_len].to_string()
+            } else {
+                s
+            }
         })
     }
 }
