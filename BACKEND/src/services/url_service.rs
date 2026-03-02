@@ -95,18 +95,36 @@ impl UrlService {
         let model_id = model.id;
 
         tokio::spawn(async move {
+            let mut tx = match repo_clone.pool().begin().await {
+                Ok(tx) => tx,
+                Err(e) => {
+                    tracing::error!("Failed to start transaction for click tracking: {}", e);
+                    return;
+                }
+            };
+
             if let Err(e) = repo_clone
-                .increment_click_count(repo_clone.pool(), &code_string)
+                .increment_click_count(&mut *tx, &code_string)
                 .await
             {
                 tracing::error!("Failed to increment click count for {}: {}", code_string, e);
+                return;
             }
             if let Err(e) = repo_clone
-                .record_click(repo_clone.pool(), model_id, user_agent, client_ip, referrer)
+                .record_click(&mut *tx, model_id, user_agent, client_ip, referrer)
                 .await
             {
                 tracing::error!(
                     "Failed to record click analytics for {}: {}",
+                    code_string,
+                    e
+                );
+                return;
+            }
+
+            if let Err(e) = tx.commit().await {
+                tracing::error!(
+                    "Failed to commit click transaction for {}: {}",
                     code_string,
                     e
                 );
@@ -133,6 +151,8 @@ impl UrlService {
             if owner_id != caller_id {
                 return Err(AppError::Forbidden);
             }
+        } else {
+            return Err(AppError::Forbidden);
         }
 
         let total_records = self.url_repository.count_stats(code).await?;
