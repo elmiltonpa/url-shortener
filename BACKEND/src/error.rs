@@ -22,9 +22,6 @@ pub enum AppError {
     #[error("Resource already exists")]
     Conflict,
 
-    #[error("Rate limit exceeded")]
-    RateLimitExceeded,
-
     #[error("Internal server error")]
     Internal(#[from] anyhow::Error),
 
@@ -42,9 +39,6 @@ pub enum AppError {
 
     #[error("Failed to create token")]
     TokenCreationFailed,
-
-    #[error("Invalid or expired token")]
-    InvalidToken,
 
     #[error("Invalid credentials")]
     InvalidCredentials,
@@ -68,15 +62,31 @@ pub enum AppError {
         "This account requires external authentication. Please sign in using your social provider."
     )]
     ExternalAuthenticationRequired,
+
+    #[error("You do not have permission to access this resource")]
+    Forbidden,
 }
 
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let (status, error_message) = match self {
-            AppError::DatabaseError(_) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "A database error occurred".to_string(),
-            ),
+            AppError::DatabaseError(ref e) => {
+                if let Some(db_err) = e.as_database_error() {
+                    if db_err.is_unique_violation() {
+                        (StatusCode::CONFLICT, "Resource already exists".to_string())
+                    } else {
+                        (
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                            "A database error occurred".to_string(),
+                        )
+                    }
+                } else {
+                    (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        "A database error occurred".to_string(),
+                    )
+                }
+            }
             AppError::RedisError(_) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "A cache error occurred".to_string(),
@@ -84,19 +94,27 @@ impl IntoResponse for AppError {
             AppError::ExternalAuthenticationRequired => {
                 (StatusCode::UNAUTHORIZED, self.to_string())
             }
-            AppError::InvalidToken => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
-            AppError::InvalidKey => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
-            AppError::TokenCreationFailed => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
-            AppError::PasswordHashFailed => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
+            AppError::InvalidKey => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Encryption key error".to_string(),
+            ),
+            AppError::TokenCreationFailed => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to generate authentication token".to_string(),
+            ),
+            AppError::PasswordHashFailed => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal security error".to_string(),
+            ),
             AppError::InvalidCredentials => (StatusCode::UNAUTHORIZED, self.to_string()),
             AppError::TokenExpired => (StatusCode::UNAUTHORIZED, self.to_string()),
             AppError::TokenInvalidSignature => (StatusCode::UNAUTHORIZED, self.to_string()),
             AppError::TokenMalformed => (StatusCode::BAD_REQUEST, self.to_string()),
             AppError::UrlMalicious => (StatusCode::FORBIDDEN, self.to_string()),
+            AppError::Forbidden => (StatusCode::FORBIDDEN, self.to_string()),
             AppError::NotFound => (StatusCode::NOT_FOUND, self.to_string()),
             AppError::ValidationError(msg) => (StatusCode::BAD_REQUEST, msg),
             AppError::Conflict => (StatusCode::CONFLICT, self.to_string()),
-            AppError::RateLimitExceeded => (StatusCode::TOO_MANY_REQUESTS, self.to_string()),
             AppError::UserAlreadyExists => (StatusCode::CONFLICT, self.to_string()),
             AppError::Gone => (StatusCode::GONE, self.to_string()),
             AppError::Internal(_) => (
