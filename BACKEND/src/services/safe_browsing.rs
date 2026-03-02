@@ -46,7 +46,7 @@ impl SafeBrowsingService {
             .send()
             .await
             .map_err(|e| {
-                tracing::error!("Error de red con Google Safe Browsing: {}", e);
+                tracing::error!("Network error with Google Safe Browsing: {}", e);
                 AppError::Internal(anyhow::anyhow!(e))
             })?;
 
@@ -68,7 +68,7 @@ impl SafeBrowsingService {
             if !matches.is_empty() {
                 for m in &matches {
                     tracing::warn!(
-                        "Bloqueada URL maliciosa. Tipo: {:?}, Plataforma: {}",
+                        "Blocked malicious URL. Type: {:?}, Platform: {}",
                         m.threat_type,
                         m.platform_type
                     );

@@ -9,8 +9,8 @@ use tower_governor::{
 pub fn build_rate_limit_config() -> GovernorConfig<PeerIpKeyExtractor, NoOpMiddleware<QuantaInstant>>
 {
     let governor_conf = GovernorConfigBuilder::default()
-        .per_second(2)
-        .burst_size(5)
+        .per_second(10)
+        .burst_size(30)
         .finish()
         .unwrap();
 
@@ -19,7 +19,7 @@ pub fn build_rate_limit_config() -> GovernorConfig<PeerIpKeyExtractor, NoOpMiddl
     tokio::spawn(async move {
         loop {
             tokio::time::sleep(interval).await;
-            tracing::info!("rate limiting storage size: {}", governor_limiter.len());
+            tracing::info!("Rate limiting storage size: {}", governor_limiter.len());
             governor_limiter.retain_recent();
         }
     });
