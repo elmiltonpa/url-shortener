@@ -33,7 +33,7 @@ impl UserService {
             .as_ref()
             .ok_or(AppError::ExternalAuthenticationRequired)?;
 
-        let password_correct = verify_password(password, hash)?;
+        let password_correct = verify_password(password, hash).await?;
 
         if !password_correct {
             return Err(AppError::InvalidCredentials);
@@ -48,7 +48,7 @@ impl UserService {
         email: &str,
         password: &str,
     ) -> AppResult<AuthResponse> {
-        let password_hash = hash_password(password)?;
+        let password_hash = hash_password(password).await?;
 
         let user_created = self
             .user_repository
