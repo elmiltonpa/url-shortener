@@ -3,14 +3,15 @@ use governor::middleware::NoOpMiddleware;
 use std::time::Duration;
 use tower_governor::{
     governor::{GovernorConfig, GovernorConfigBuilder},
-    key_extractor::PeerIpKeyExtractor,
+    key_extractor::SmartIpKeyExtractor,
 };
 
-pub fn build_rate_limit_config() -> GovernorConfig<PeerIpKeyExtractor, NoOpMiddleware<QuantaInstant>>
-{
+pub fn build_rate_limit_config()
+-> GovernorConfig<SmartIpKeyExtractor, NoOpMiddleware<QuantaInstant>> {
     let governor_conf = GovernorConfigBuilder::default()
         .per_second(10)
         .burst_size(30)
+        .key_extractor(SmartIpKeyExtractor)
         .finish()
         .unwrap();
 
