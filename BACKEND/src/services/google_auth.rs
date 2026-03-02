@@ -6,10 +6,10 @@ use reqwest::Client;
 use serde_json::json;
 
 pub struct GoogleAuthService {
-    pub client_http: Client,
-    pub client_id: String,
-    pub client_secret: String,
-    pub redirect_uri: String,
+    client_http: Client,
+    client_id: String,
+    client_secret: String,
+    redirect_uri: String,
 }
 
 impl GoogleAuthService {
@@ -38,13 +38,24 @@ impl GoogleAuthService {
             "grant_type": "authorization_code"
         });
 
-        let response = self
-            .client_http
-            .post(url)
-            .json(&body)
-            .send()
-            .await?
-            .error_for_status()?;
+        let response = self.client_http.post(url).json(&body).send().await?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_body = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "Unable to read response body".to_string());
+            tracing::error!(
+                "Google OAuth token exchange failed with status {}: {}",
+                status,
+                error_body
+            );
+            return Err(AppError::ValidationError(format!(
+                "Google authentication failed: {}",
+                status
+            )));
+        }
 
         let token_data = response.json::<GoogleTokenResponse>().await?;
 
@@ -59,8 +70,24 @@ impl GoogleAuthService {
             .get(url)
             .bearer_auth(access_token)
             .send()
-            .await?
-            .error_for_status()?;
+            .await?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_body = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "Unable to read response body".to_string());
+            tracing::error!(
+                "Google user info request failed with status {}: {}",
+                status,
+                error_body
+            );
+            return Err(AppError::ValidationError(format!(
+                "Failed to retrieve Google user info: {}",
+                status
+            )));
+        }
 
         let user_info = response.json::<GoogleUserInfo>().await?;
 
