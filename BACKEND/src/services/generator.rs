@@ -1,15 +1,15 @@
+const DEFAULT_ALPHABET: &str = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+
 pub struct CodeGenerator {
-    pub length: usize,
-    pub alphabet: Vec<char>,
+    length: usize,
+    alphabet: Vec<char>,
 }
 
 impl CodeGenerator {
-    pub fn new(length: usize, alphabet_str: &str) -> Self {
-        let alphabet_vec: Vec<char> = alphabet_str.chars().collect();
-
+    pub fn new(length: usize) -> Self {
         Self {
             length,
-            alphabet: alphabet_vec,
+            alphabet: DEFAULT_ALPHABET.chars().collect(),
         }
     }
 
