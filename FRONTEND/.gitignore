@@ -26,6 +26,8 @@ pnpm-debug.log*
 
 TASKS.md
 
+#BACKEND_RE*
+
 client_secret*
 
 # Gemini CLI & Agents
