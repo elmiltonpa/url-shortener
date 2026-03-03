@@ -28,9 +28,9 @@ pub struct RegisterRequest {
     pub email: String,
 
     #[validate(length(
-        min = 8,
+        min = 6,
         max = 128,
-        message = "Password must be between 8 and 128 characters"
+        message = "Password must be between 6 and 128 characters"
     ))]
     pub password: String,
 }

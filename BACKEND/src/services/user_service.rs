@@ -10,14 +10,14 @@ use crate::{
 
 pub struct UserService {
     user_repository: UserRepository,
-    jwt_secret: String,
+    paseto_key: String,
 }
 
 impl UserService {
-    pub fn new(repo: UserRepository, jwt_secret: String) -> Self {
+    pub fn new(repo: UserRepository, paseto_key: String) -> Self {
         Self {
             user_repository: repo,
-            jwt_secret,
+            paseto_key,
         }
     }
 
@@ -116,7 +116,7 @@ impl UserService {
     }
 
     async fn generate_auth_response(&self, user: UserModel) -> AppResult<AuthResponse> {
-        let token = create_token(&user.id.to_string(), self.jwt_secret.as_bytes())?;
+        let token = create_token(&user.id.to_string(), self.paseto_key.as_bytes())?;
 
         Ok(AuthResponse {
             token,

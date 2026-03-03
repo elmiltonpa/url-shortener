@@ -6,7 +6,7 @@ pub struct Config {
     pub server_port: u16,
     pub app_domain: String,
     pub safe_browsing_api_key: String,
-    pub jwt_secret: String,
+    pub paseto_key: String,
     pub google_client_id: String,
     pub google_client_secret: String,
     pub google_redirect_uri: String,
@@ -24,7 +24,7 @@ impl Config {
         let app_domain =
             std::env::var("APP_DOMAIN").unwrap_or_else(|_| "http://localhost:8080".to_string());
         let safe_browsing_api_key = std::env::var("SAFE_BROWSING_API_KEY")?;
-        let jwt_secret = std::env::var("JWT_SECRET")?;
+        let paseto_key = std::env::var("PASETO_KEY")?;
         let google_client_id = std::env::var("GOOGLE_CLIENT_ID")?;
         let google_client_secret = std::env::var("GOOGLE_CLIENT_SECRET")?;
         let google_redirect_uri = std::env::var("GOOGLE_REDIRECT_URI")?;
@@ -35,7 +35,7 @@ impl Config {
             server_port,
             app_domain,
             safe_browsing_api_key,
-            jwt_secret,
+            paseto_key,
             google_client_id,
             google_client_secret,
             google_redirect_uri,

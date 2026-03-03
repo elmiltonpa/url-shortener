@@ -41,7 +41,7 @@ async fn main() {
 
     let pool = PgPoolOptions::new()
         .max_connections(20)
-        .acquire_timeout(Duration::from_secs(3))
+        .acquire_timeout(Duration::from_secs(15))
         .idle_timeout(Some(Duration::from_secs(30)))
         .connect(&config.database_url)
         .await
@@ -72,7 +72,7 @@ async fn main() {
     let url_service = Arc::new(url_service);
 
     let user_service =
-        services::user_service::UserService::new(user_repository, config.jwt_secret.clone());
+        services::user_service::UserService::new(user_repository, config.paseto_key.clone());
     let user_service = Arc::new(user_service);
 
     let google_service = services::google_auth::GoogleAuthService::new(

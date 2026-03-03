@@ -29,7 +29,7 @@ pub async fn auth_middleware(
     }
 
     let token = &auth_header[7..];
-    let secret_key = state.config.jwt_secret.as_bytes();
+    let secret_key = state.config.paseto_key.as_bytes();
 
     let claims = verify_token(token, secret_key).map_err(|_| StatusCode::UNAUTHORIZED)?;
 

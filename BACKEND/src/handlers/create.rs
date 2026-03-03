@@ -67,7 +67,7 @@ fn extract_optional_user_id(
         .ok()?;
 
     let token = header.strip_prefix("Bearer ")?;
-    let secret_key = state.config.jwt_secret.as_bytes();
+    let secret_key = state.config.paseto_key.as_bytes();
 
     let claims = crate::utils::token::verify_token(token, secret_key).ok()?;
 
