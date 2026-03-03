@@ -1,0 +1,112 @@
+---
+import Layout from "../../../layouts/Layout.astro";
+import { actions, isActionError, isInputError } from "astro:actions";
+import { validateOAuthState } from "../../../lib/oauth";
+
+const code = Astro.url.searchParams.get("code");
+const state = Astro.url.searchParams.get("state");
+let errorMessage = "";
+
+if (!validateOAuthState(Astro.cookies, state)) {
+    errorMessage =
+        "Authentication request expired or was tampered with. Please try again.";
+} else if (!code) {
+    errorMessage = "No authentication code provided by Google.";
+} else {
+    try {
+        const { data, error } = await Astro.callAction(
+            actions.loginWithGoogle,
+            { code },
+        );
+
+        if (error) {
+            if (isInputError(error)) {
+                errorMessage =
+                    Object.values(error.fields).flat()[0] || error.message;
+            } else if (isActionError(error)) {
+                errorMessage = error.message;
+            } else {
+                errorMessage =
+                    "An unexpected error occurred during Google authentication.";
+            }
+        } else if (data) {
+            Astro.response.headers.set(
+                "Cache-Control",
+                "no-cache, no-store, must-revalidate",
+            );
+            return Astro.redirect("/", 302);
+        }
+    } catch (e) {
+        console.error("[google/callback] Unexpected error:", e);
+        errorMessage =
+            "An unexpected error occurred during Google authentication.";
+    }
+}
+---
+
+<Layout title="Authenticating with Google...">
+    <main
+        class="min-h-screen flex items-center justify-center bg-background text-foreground p-4"
+    >
+        <div
+            class="max-w-md w-full text-center space-y-6 animate-in fade-in duration-700"
+        >
+            <div class="flex flex-col items-center gap-4">
+                {
+                    errorMessage ? (
+                        <>
+                            <div class="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-2">
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="32"
+                                    height="32"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    class="text-destructive"
+                                >
+                                    <>
+                                        <circle cx="12" r="10" />
+                                        <line x1="12" y1="8" x2="12" y2="12" />
+                                        <line
+                                            x1="12"
+                                            y1="16"
+                                            x2="12.01"
+                                            y2="16"
+                                        />
+                                    </>
+                                </svg>
+                            </div>
+                            <h1 class="text-2xl font-bold">
+                                Authentication Failed
+                            </h1>
+                            <p class="text-muted-foreground">{errorMessage}</p>
+                            <a
+                                href="/login"
+                                class="mt-4 px-6 py-2 bg-primary text-primary-foreground rounded-md hover:opacity-90 transition-opacity"
+                            >
+                                Back to Login
+                            </a>
+                        </>
+                    ) : (
+                        <>
+                            <div class="relative w-16 h-16">
+                                <div class="absolute inset-0 rounded-full border-4 border-primary/20" />
+                                <div class="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin" />
+                            </div>
+                            <h1 class="text-2xl font-bold">
+                                Authenticating...
+                            </h1>
+                            <p class="text-muted-foreground italic">
+                                Completing your secure sign-in with Google
+                            </p>
+                        </>
+                    )
+                }
+            </div>
+        </div>
+    </main>
+</Layout>
