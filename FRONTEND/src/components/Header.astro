@@ -1,6 +1,9 @@
 ---
 import LinkButton from "./ui/Button/LinkButton.vue";
 import Logo from "./ui/Logo.vue";
+import UserMenu from "./ui/UserMenu.vue";
+
+const { user } = Astro.locals;
 ---
 
 <header
@@ -10,17 +13,25 @@ import Logo from "./ui/Logo.vue";
         <Logo client:load />
 
         <nav class="flex items-center gap-3">
-            <LinkButton href="/login" variant="ghost" size="sm">
-                Log in
-            </LinkButton>
-            <LinkButton
-                href="/register"
-                variant="default"
-                size="sm"
-                class="px-5 shadow-sm"
-            >
-                Sign Up
-            </LinkButton>
+            {
+                user ? (
+                    <UserMenu client:load user={user} />
+                ) : (
+                    <>
+                        <LinkButton href="/login" variant="ghost" size="sm">
+                            Log in
+                        </LinkButton>
+                        <LinkButton
+                            href="/register"
+                            variant="default"
+                            size="sm"
+                            class="px-5 shadow-sm"
+                        >
+                            Sign Up
+                        </LinkButton>
+                    </>
+                )
+            }
         </nav>
     </div>
 </header>
