@@ -1,5 +1,78 @@
 import { defineAction, ActionError } from "astro:actions";
+import type { AstroCookies } from "astro";
 import { z } from "astro:schema";
+
+const STATUS_CODE_MAP: Record<number, ActionError["code"]> = {
+  400: "BAD_REQUEST",
+  401: "UNAUTHORIZED",
+  403: "FORBIDDEN",
+  404: "NOT_FOUND",
+  409: "CONFLICT",
+  429: "TOO_MANY_REQUESTS",
+};
+
+function mapStatusToCode(status: number): ActionError["code"] {
+  return STATUS_CODE_MAP[status] ?? "INTERNAL_SERVER_ERROR";
+}
+
+async function handleBackendResponse(response: Response, defaultError: string) {
+  if (!response.ok) {
+    let errorData: Record<string, string> = {};
+    try {
+      errorData = await response.json();
+    } catch {
+      // Backend returned non-JSON (likely HTML error page or empty body)
+      console.error(
+        `[backend] Non-JSON error response: ${response.status} ${response.statusText}`,
+      );
+    }
+    throw new ActionError({
+      code: mapStatusToCode(response.status),
+      message: errorData.error || defaultError,
+    });
+  }
+  return response.json();
+}
+
+function getApiUrl(): string {
+  const apiUrl = import.meta.env.API_URL;
+  if (!apiUrl) {
+    throw new ActionError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Server configuration error",
+    });
+  }
+  return apiUrl;
+}
+
+const AUTH_COOKIE_OPTIONS = {
+  path: "/",
+  httpOnly: true,
+  secure: import.meta.env.PROD,
+  sameSite: "lax",
+  maxAge: 60 * 60 * 24, // 24 hours
+} as const;
+
+interface AuthResponse {
+  token: string;
+  user: { id: string; email: string; username: string };
+}
+
+function setAuthCookies(cookies: AstroCookies, data: AuthResponse): void {
+  cookies.set("auth_token", data.token, AUTH_COOKIE_OPTIONS);
+
+  cookies.set("user_data", JSON.stringify(data.user), {
+    ...AUTH_COOKIE_OPTIONS,
+    // httpOnly: true — inherited from AUTH_COOKIE_OPTIONS
+    // This cookie is NOT readable by client-side JavaScript.
+    // User data for the client is passed via Astro.locals -> component props.
+  });
+}
+
+function clearAuthCookies(cookies: AstroCookies): void {
+  cookies.delete("auth_token", { path: "/" });
+  cookies.delete("user_data", { path: "/" });
+}
 
 export const server = {
   shortenUrl: defineAction({
@@ -7,12 +80,8 @@ export const server = {
       url: z.preprocess(
         (val) => {
           if (typeof val !== "string") return val;
-          let url = val.trim();
-
-          if (!/^https?:\/\//i.test(url)) {
-            url = `https://${url}`;
-          }
-          return url;
+          const trimmed = val.trim();
+          return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
         },
         z
           .string()
@@ -36,49 +105,151 @@ export const server = {
           ),
       ),
     }),
-    handler: async (input) => {
-      const apiUrl = import.meta.env.API_URL;
-
-      if (!apiUrl) {
-        throw new ActionError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Server configuration incomplete (API_URL missing)",
-        });
-      }
+    handler: async (input, context) => {
+      const apiUrl = getApiUrl();
 
       try {
+        const token = context.cookies.get("auth_token")?.value;
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json",
+        };
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+
         const response = await fetch(`${apiUrl}/`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers,
           body: JSON.stringify({ original_url: input.url }),
         });
 
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new ActionError({
-            code:
-              response.status === 400 ? "BAD_REQUEST" : "INTERNAL_SERVER_ERROR",
-            message: errorData.message || "Backend failed to process the URL",
-          });
-        }
+        const data = await handleBackendResponse(
+          response,
+          "Backend failed to process the URL",
+        );
 
-        const data = await response.json();
+        // Build short URL using the frontend's origin instead of the backend's
+        const frontendOrigin = new URL(context.request.url).origin;
 
         return {
           short_code: data.short_code,
           original_url: data.original_url,
-          short_url: data.short_url,
+          short_url: `${frontendOrigin}/${data.short_code}`,
           created_at: data.created_at,
           expires_at: data.expires_at,
         };
       } catch (e) {
         if (e instanceof ActionError) throw e;
-
+        console.error("[shortenUrl] Failed to reach backend:", e);
         throw new ActionError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Failed to connect to the shortening service",
         });
       }
+    },
+  }),
+
+  register: defineAction({
+    input: z.object({
+      username: z
+        .string()
+        .min(3, "Username must be at least 3 characters")
+        .max(50, "Username must be at most 50 characters"),
+      email: z.string().email("Invalid email format"),
+      password: z.string().min(6, "Password must be at least 6 characters"),
+    }),
+    handler: async (input, context) => {
+      const apiUrl = getApiUrl();
+
+      try {
+        const response = await fetch(`${apiUrl}/auth/register`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(input),
+        });
+
+        const data = await handleBackendResponse(
+          response,
+          "Registration failed",
+        );
+
+        setAuthCookies(context.cookies, data);
+        return { user: data.user };
+      } catch (e) {
+        if (e instanceof ActionError) throw e;
+        console.error("[register] Failed to reach backend:", e);
+        throw new ActionError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "An unexpected error occurred during registration",
+        });
+      }
+    },
+  }),
+
+  login: defineAction({
+    input: z.object({
+      email: z.string().email("Invalid email format"),
+      password: z.string().min(1, "Password is required"),
+    }),
+    handler: async (input, context) => {
+      const apiUrl = getApiUrl();
+
+      try {
+        const response = await fetch(`${apiUrl}/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(input),
+        });
+
+        const data = await handleBackendResponse(response, "Login failed");
+
+        setAuthCookies(context.cookies, data);
+        return { user: data.user };
+      } catch (e) {
+        if (e instanceof ActionError) throw e;
+        console.error("[login] Failed to reach backend:", e);
+        throw new ActionError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "An unexpected error occurred during login",
+        });
+      }
+    },
+  }),
+
+  loginWithGoogle: defineAction({
+    input: z.object({
+      code: z.string().min(1, "Authorization code is required"),
+    }),
+    handler: async (input, context) => {
+      const apiUrl = getApiUrl();
+
+      try {
+        const response = await fetch(`${apiUrl}/auth/google`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code: input.code }),
+        });
+
+        const data = await handleBackendResponse(
+          response,
+          "Google login failed",
+        );
+
+        setAuthCookies(context.cookies, data);
+        return { user: data.user };
+      } catch (e) {
+        if (e instanceof ActionError) throw e;
+        console.error("[loginWithGoogle] Failed to reach backend:", e);
+        throw new ActionError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "An unexpected error occurred during Google login",
+        });
+      }
+    },
+  }),
+
+  logout: defineAction({
+    handler: async (_, context) => {
+      clearAuthCookies(context.cookies);
+      return { success: true };
     },
   }),
 };
