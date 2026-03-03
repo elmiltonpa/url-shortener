@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { reactive } from "vue";
-import { User, Mail, Lock, ArrowRight } from "lucide-vue-next";
+import { User, Mail, Lock, ArrowRight, Loader2 } from "lucide-vue-next";
+import { actions, isActionError, isInputError } from "astro:actions";
+import { useFormSubmit } from "../../composables/useFormSubmit";
 import Button from "../ui/Button/Button.vue";
 import Input from "../ui/Input.vue";
 import Logo from "../ui/Logo.vue";
@@ -12,12 +14,37 @@ const formData = reactive({
     confirmPassword: "",
 });
 
-const handleSubmit = () => {
-    console.log("Registering:", { ...formData });
-};
+const { isLoading, errorMessage, handleSubmit } = useFormSubmit();
+
+const onSubmit = () =>
+    handleSubmit(async () => {
+        if (formData.password !== formData.confirmPassword) {
+            errorMessage.value = "Passwords do not match";
+            return;
+        }
+
+        const { data, error } = await actions.register({
+            username: formData.username,
+            email: formData.email,
+            password: formData.password,
+        });
+
+        if (error) {
+            if (isInputError(error)) {
+                const errors = Object.values(error.fields).flat();
+                errorMessage.value = errors[0] || "Invalid input";
+            } else if (isActionError(error)) {
+                errorMessage.value = error.message;
+            } else {
+                errorMessage.value = "An unexpected error occurred";
+            }
+        } else if (data) {
+            window.location.href = "/";
+        }
+    });
 
 const loginWithGoogle = () => {
-    console.log("Google login");
+    window.location.href = "/api/auth/google";
 };
 </script>
 
@@ -38,7 +65,14 @@ const loginWithGoogle = () => {
             </div>
         </div>
 
-        <form @submit.prevent="handleSubmit" class="space-y-4">
+        <form @submit.prevent="onSubmit" class="space-y-4">
+            <div
+                v-if="errorMessage"
+                class="p-3 text-sm font-medium text-destructive bg-destructive/10 rounded-md border border-destructive/20"
+            >
+                {{ errorMessage }}
+            </div>
+
             <div class="space-y-4">
                 <Input
                     name="username"
@@ -46,6 +80,7 @@ const loginWithGoogle = () => {
                     type="text"
                     v-model="formData.username"
                     required
+                    :disabled="isLoading"
                 >
                     <template #icon>
                         <User class="h-4 w-4" />
@@ -58,6 +93,7 @@ const loginWithGoogle = () => {
                     type="email"
                     v-model="formData.email"
                     required
+                    :disabled="isLoading"
                 >
                     <template #icon>
                         <Mail class="h-4 w-4" />
@@ -70,6 +106,7 @@ const loginWithGoogle = () => {
                     type="password"
                     v-model="formData.password"
                     required
+                    :disabled="isLoading"
                 >
                     <template #icon>
                         <Lock class="h-4 w-4" />
@@ -82,6 +119,7 @@ const loginWithGoogle = () => {
                     type="password"
                     v-model="formData.confirmPassword"
                     required
+                    :disabled="isLoading"
                 >
                     <template #icon>
                         <Lock class="h-4 w-4" />
@@ -91,10 +129,14 @@ const loginWithGoogle = () => {
 
             <Button
                 type="submit"
+                :disabled="isLoading"
                 class="w-full py-6 text-base shadow-lg shadow-primary/10 transition-all hover:shadow-primary/20 active:scale-[0.98]"
             >
-                Create account
-                <ArrowRight class="ml-2 h-4 w-4" />
+                <Loader2 v-if="isLoading" class="mr-2 h-4 w-4 animate-spin" />
+                <template v-else>
+                    Create account
+                    <ArrowRight class="ml-2 h-4 w-4" />
+                </template>
             </Button>
         </form>
 
@@ -112,6 +154,7 @@ const loginWithGoogle = () => {
         <Button
             variant="outline"
             type="button"
+            :disabled="isLoading"
             class="w-full py-6 text-base border-border bg-card/50 hover:bg-accent transition-all active:scale-[0.98]"
             @click="loginWithGoogle"
         >

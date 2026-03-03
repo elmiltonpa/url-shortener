@@ -1,22 +1,39 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { Mail, Lock, ArrowRight } from "lucide-vue-next";
+import { Mail, Lock, ArrowRight, Loader2 } from "lucide-vue-next";
+import { actions, isActionError, isInputError } from "astro:actions";
+import { useFormSubmit } from "../../composables/useFormSubmit";
 import Button from "../ui/Button/Button.vue";
 import Input from "../ui/Input.vue";
 import Logo from "../ui/Logo.vue";
 
 const email = ref("");
 const password = ref("");
+const { isLoading, errorMessage, handleSubmit } = useFormSubmit();
 
-const handleSubmit = () => {
-    console.log("Logging in:", {
-        email: email.value,
-        password: password.value,
+const onSubmit = () =>
+    handleSubmit(async () => {
+        const { data, error } = await actions.login({
+            email: email.value,
+            password: password.value,
+        });
+
+        if (error) {
+            if (isInputError(error)) {
+                const errors = Object.values(error.fields).flat();
+                errorMessage.value = errors[0] || "Invalid input";
+            } else if (isActionError(error)) {
+                errorMessage.value = error.message;
+            } else {
+                errorMessage.value = "An unexpected error occurred";
+            }
+        } else if (data) {
+            window.location.href = "/";
+        }
     });
-};
 
 const loginWithGoogle = () => {
-    console.log("Google login");
+    window.location.href = "/api/auth/google";
 };
 </script>
 
@@ -35,7 +52,14 @@ const loginWithGoogle = () => {
             </div>
         </div>
 
-        <form @submit.prevent="handleSubmit" class="space-y-4">
+        <form @submit.prevent="onSubmit" class="space-y-4">
+            <div
+                v-if="errorMessage"
+                class="p-3 text-sm font-medium text-destructive bg-destructive/10 rounded-md border border-destructive/20"
+            >
+                {{ errorMessage }}
+            </div>
+
             <div class="space-y-4">
                 <Input
                     name="email"
@@ -43,6 +67,7 @@ const loginWithGoogle = () => {
                     type="email"
                     v-model="email"
                     required
+                    :disabled="isLoading"
                 >
                     <template #icon>
                         <Mail class="h-4 w-4" />
@@ -55,6 +80,7 @@ const loginWithGoogle = () => {
                     type="password"
                     v-model="password"
                     required
+                    :disabled="isLoading"
                 >
                     <template #icon>
                         <Lock class="h-4 w-4" />
@@ -64,10 +90,14 @@ const loginWithGoogle = () => {
 
             <Button
                 type="submit"
+                :disabled="isLoading"
                 class="w-full py-6 text-base shadow-lg shadow-primary/10 transition-all hover:shadow-primary/20 active:scale-[0.98]"
             >
-                Log in
-                <ArrowRight class="ml-2 h-4 w-4" />
+                <Loader2 v-if="isLoading" class="mr-2 h-4 w-4 animate-spin" />
+                <template v-else>
+                    Log in
+                    <ArrowRight class="ml-2 h-4 w-4" />
+                </template>
             </Button>
         </form>
 
@@ -85,6 +115,7 @@ const loginWithGoogle = () => {
         <Button
             variant="outline"
             type="button"
+            :disabled="isLoading"
             class="w-full py-6 text-base border-border bg-card/50 hover:bg-accent transition-all active:scale-[0.98]"
             @click="loginWithGoogle"
         >
