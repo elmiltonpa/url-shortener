@@ -72,7 +72,7 @@ Authorization: Bearer <token>
 |---|---|---|
 | `username` | Min 3 characters, Max 50 characters | `Username must be between 3 and 50 characters` |
 | `email` | Must be a valid email format | `Invalid email address` |
-| `password` | Min 8 characters | `Password must be at least 8 characters` |
+| `password` | Min 6 characters | `Password must be at least 6 characters` |
 
 #### Success Response — `201 Created`
 
@@ -225,7 +225,7 @@ Authorization: Bearer <token>
 
 #### Important Notes
 
-- Short codes are **8 characters** long, alphanumeric (a-z, A-Z, 0-9).
+- Short codes are **6 characters** long, alphanumeric (a-z, A-Z, 0-9).
 - URLs **expire after 30 days** from creation.
 - The `short_url` field contains the full URL ready to share.
 - The `expires_at` field is always present (ISO 8601 format).
@@ -314,7 +314,7 @@ Here are all the validations you should implement on the frontend to match the b
 ```
 username:  required, min 3 chars, max 50 chars
 email:     required, valid email format
-password:  required, min 8 chars
+password:  required, min 6 chars
 ```
 
 ### Login Form

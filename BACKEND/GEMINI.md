@@ -49,7 +49,7 @@ The project follows a layered architecture:
 - [x] **Business Logic (Services)**:
     - [x] **Short code generation (nanoid strategy)**:
         1. **Alphabet**: Alphanumeric `[0-9a-zA-Z]` (62 chars).
-        2. **Length**: Default to 8 characters.
+        2. **Length**: Default to 6 characters.
         3. **Collision Strategy**: Retries up to 4 times with `nanoid`.
     - [ ] **Redis caching**: `src/services/cache.rs` is currently a placeholder.
     - [x] **URL validation**: Implemented in `src/services/validator.rs` (checks format, protocol, and self-referencing).
