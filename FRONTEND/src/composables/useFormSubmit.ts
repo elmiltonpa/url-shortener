@@ -18,6 +18,10 @@ export function useFormSubmit() {
 
     try {
       await submitFn();
+    } catch (e) {
+      if (!errorMessage.value) {
+        errorMessage.value = "An unexpected error occurred";
+      }
     } finally {
       isLoading.value = false;
     }
