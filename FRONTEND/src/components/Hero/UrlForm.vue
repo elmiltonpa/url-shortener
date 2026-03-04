@@ -16,7 +16,6 @@ interface ActionState {
     } | null;
 }
 
-// Estado reactivo
 const url = ref("");
 const isPending = ref(false);
 const state = reactive<ActionState>({
@@ -35,7 +34,6 @@ const handleSubmit = async () => {
         const { data, error } = await actions.shortenUrl({ url: url.value });
 
         if (error) {
-            console.log(error);
             state.error = isInputError(error)
                 ? (error.fields.url?.[0] ?? "Invalid input")
                 : isActionError(error)
