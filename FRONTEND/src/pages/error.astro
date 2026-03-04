@@ -1,0 +1,106 @@
+---
+import Layout from "../layouts/Layout.astro";
+import LinkButton from "../components/ui/Button/LinkButton.vue";
+import { Ghost, Clock, AlertCircle, MoveLeft } from "lucide-vue-next";
+
+const rawStatus = Astro.url.searchParams.get("code") || "404";
+
+const ERROR_MAP: Record<
+    string,
+    {
+        title: string;
+        subtitle: string;
+        message: string;
+        icon: any;
+        colorClass: string;
+        buttonText: string;
+        buttonHref: string;
+    }
+> = {
+    "404": {
+        title: "404 - Not Found",
+        subtitle: "Lost in <span class='text-rust'>Space?</span>",
+        message:
+            "The short link you're looking for might have expired, been deleted, or never existed.",
+        icon: Ghost,
+        colorClass: "text-rust",
+        buttonText: "Back to Home",
+        buttonHref: "/",
+    },
+    "410": {
+        title: "410 - Expired",
+        subtitle: "Link <span class='text-rust'>Expired</span>",
+        message:
+            "Time's up! This short link was set to expire and is no longer available.",
+        icon: Clock,
+        colorClass: "text-rust",
+        buttonText: "Create a new link",
+        buttonHref: "/",
+    },
+    "500": {
+        title: "500 - Server Error",
+        subtitle: "System <span class='text-destructive'>Glitch</span>",
+        message:
+            "Something went wrong on our end. We're working hard to fix the connection.",
+        icon: AlertCircle,
+        colorClass: "text-destructive",
+        buttonText: "Try again later",
+        buttonHref: "/",
+    },
+};
+
+const status = rawStatus in ERROR_MAP ? rawStatus : "404";
+const config = ERROR_MAP[status];
+const Icon = config.icon;
+---
+
+<Layout title={`${config.title} | Short.rs`}>
+    <main
+        class="min-h-screen flex items-center justify-center bg-background text-foreground p-6 relative overflow-hidden"
+    >
+        <div
+            class={`absolute top-1/4 -left-20 w-80 h-80 rounded-full blur-3xl opacity-30 ${status === "500" ? "bg-destructive/10" : "bg-rust/10"}`}
+        >
+        </div>
+
+        <div class="max-w-md w-full text-center space-y-8 relative z-10">
+            <div class="flex justify-center">
+                <div
+                    class={`relative w-32 h-32 flex items-center justify-center bg-secondary/30 rounded-full border backdrop-blur-sm ${status === "500" ? "border-destructive/20" : "border-rust/20"}`}
+                >
+                    <Icon class={`w-16 h-16 opacity-80 ${config.colorClass}`} />
+                    <div
+                        class={`absolute -top-1 -right-1 w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold text-white ${status === "500" ? "bg-destructive" : "bg-rust"}`}
+                    >
+                        {status}
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <h1
+                    class="text-5xl font-extrabold tracking-tight"
+                    set:html={config.subtitle}
+                />
+                <p class="text-muted-foreground text-lg leading-relaxed">
+                    {config.message}
+                </p>
+            </div>
+
+            <div class="flex justify-center pt-4">
+                <LinkButton
+                    client:load
+                    href={config.buttonHref}
+                    variant={status === "500" ? "outline" : "default"}
+                    size="lg"
+                    class={status !== "500"
+                        ? "bg-rust hover:bg-rust/90 text-white font-medium"
+                        : "border-destructive/20 hover:bg-destructive/10"}
+                >
+                    <MoveLeft class="w-4 h-4 mr-2" />
+                    {config.buttonText}
+                </LinkButton>
+            </div>
+        </div>
+    </main>
+</Layout>
