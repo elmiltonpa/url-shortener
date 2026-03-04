@@ -87,13 +87,13 @@ const handleLogout = async () => {
                 Dashboard
             </a>
 
-            <a
+            <!-- <a
                 href="/settings"
                 class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-foreground/80 hover:bg-accent hover:text-foreground transition-colors"
             >
                 <Settings class="w-4 h-4" />
                 Settings
-            </a>
+            </a> -->
 
             <div class="h-px bg-border/30 my-1 mx-1"></div>
 
