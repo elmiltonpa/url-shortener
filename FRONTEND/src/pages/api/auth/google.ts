@@ -5,7 +5,7 @@ export const GET: APIRoute = (context) => {
   const clientId = import.meta.env.PUBLIC_GOOGLE_CLIENT_ID;
 
   if (!clientId) {
-    return new Response("Google OAuth is not configured", { status: 500 });
+    return context.redirect("/error?code=500", 302);
   }
 
   const redirectUri = `${context.url.origin}/auth/google/callback`;
