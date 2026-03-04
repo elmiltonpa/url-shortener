@@ -4,10 +4,7 @@ const OAUTH_STATE_COOKIE = "oauth_state";
 const STATE_BYTE_LENGTH = 32;
 
 export function generateOAuthState(cookies: AstroCookies): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(STATE_BYTE_LENGTH));
-  const state = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join(
-    "",
-  );
+  const state = crypto.randomUUID();
 
   cookies.set(OAUTH_STATE_COOKIE, state, {
     path: "/",
