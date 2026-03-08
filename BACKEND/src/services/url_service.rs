@@ -1,6 +1,6 @@
 use crate::{
     error::{AppError, AppResult},
-    models::url::{PaginationMeta, UrlModel, UrlStatsResponse},
+    models::url::{PaginationMeta, UrlListResponse, UrlModel, UrlResponse, UrlStatsResponse},
     repository::url_repo::UrlRepository,
     services::{
         generator::CodeGenerator, safe_browsing::SafeBrowsingService, validator::UrlValidator,
@@ -134,6 +134,45 @@ impl UrlService {
         });
 
         Ok(model.original_url)
+    }
+
+    pub async fn get_user_urls(
+        &self,
+        user_id: Uuid,
+        app_domain: &str,
+        limit: i64,
+        offset: i64,
+    ) -> AppResult<UrlListResponse> {
+        let urls = self
+            .url_repository
+            .get_user_urls(self.url_repository.pool(), user_id, limit, offset)
+            .await?;
+
+        let total_records = self.url_repository.count_user_urls(user_id).await?;
+
+        let total_pages = (total_records + limit - 1) / limit;
+        let current_page = (offset / limit) + 1;
+
+        let url_responses: Vec<UrlResponse> = urls
+            .into_iter()
+            .map(|url| UrlResponse {
+                short_url: format!("{}/{}", app_domain, url.short_code),
+                original_url: url.original_url,
+                short_code: url.short_code,
+                created_at: url.created_at,
+                expires_at: url.expires_at,
+            })
+            .collect();
+
+        Ok(UrlListResponse {
+            urls: url_responses,
+            pagination: PaginationMeta {
+                page: current_page,
+                per_page: limit,
+                total_records,
+                total_pages,
+            },
+        })
     }
 
     pub async fn get_stats(

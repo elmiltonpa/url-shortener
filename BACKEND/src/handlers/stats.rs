@@ -8,7 +8,7 @@ use uuid::Uuid;
 
 use crate::{
     error::{AppError, AppResult},
-    models::url::StatsQuery,
+    models::url::PaginationQuery,
     state::AppState,
 };
 
@@ -16,7 +16,7 @@ pub async fn get_stats(
     State(state): State<Arc<AppState>>,
     Extension(user_id): Extension<String>,
     Path(code): Path<String>,
-    Query(query): Query<StatsQuery>,
+    Query(query): Query<PaginationQuery>,
 ) -> AppResult<impl IntoResponse> {
     let caller_id = Uuid::parse_str(&user_id)
         .map_err(|_| AppError::ValidationError("Invalid user ID in token".to_string()))?;
