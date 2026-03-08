@@ -199,4 +199,53 @@ impl UrlRepository {
 
         Ok(result.rows_affected())
     }
+
+    pub async fn get_user_urls<'a, E>(
+        &self,
+        executor: E,
+        user_id: Uuid,
+        limit: i64,
+        offset: i64,
+    ) -> AppResult<Vec<UrlModel>>
+    where
+        E: Executor<'a, Database = Postgres>,
+    {
+        let urls: Vec<UrlModel> = query_as::<_, UrlModel>(
+            r#"
+            SELECT
+                id,
+                original_url,
+                short_code,
+                click_count,
+                created_by_ip,
+                user_id,
+                created_at,
+                expires_at
+            FROM urls
+            WHERE user_id = $1
+            ORDER BY created_at DESC
+            LIMIT $2 OFFSET $3
+            "#,
+        )
+        .bind(user_id)
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(executor)
+        .await?;
+        Ok(urls)
+    }
+
+    pub async fn count_user_urls(&self, user_id: Uuid) -> AppResult<i64> {
+        let row: (i64,) = sqlx::query_as(
+            r#"
+            SELECT COUNT(*)
+            FROM urls
+            WHERE user_id = $1
+            "#,
+        )
+        .bind(user_id)
+        .fetch_one(self.pool())
+        .await?;
+        Ok(row.0)
+    }
 }
