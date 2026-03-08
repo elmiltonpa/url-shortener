@@ -35,6 +35,12 @@ pub struct UrlResponse {
     pub expires_at: Option<DateTime<Utc>>,
 }
 
+#[derive(Serialize)]
+pub struct UrlListResponse {
+    pub urls: Vec<UrlResponse>,
+    pub pagination: PaginationMeta,
+}
+
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct StatModel {
     pub id: i64,
@@ -47,12 +53,12 @@ pub struct StatModel {
 }
 
 #[derive(Deserialize)]
-pub struct StatsQuery {
+pub struct PaginationQuery {
     pub page: Option<i64>,
     pub per_page: Option<i64>,
 }
 
-impl StatsQuery {
+impl PaginationQuery {
     const DEFAULT_PAGE: i64 = 1;
     const DEFAULT_PER_PAGE: i64 = 20;
     const MAX_PER_PAGE: i64 = 100;
