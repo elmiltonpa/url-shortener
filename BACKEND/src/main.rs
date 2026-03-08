@@ -95,6 +95,7 @@ async fn main() {
 
     let private_routes = Router::new()
         .route("/stats/{code}", get(handlers::stats::get_stats))
+        .route("/user/urls", get(handlers::url::list_user_urls))
         .layer(axum::middleware::from_fn_with_state(
             state.clone(),
             auth_middleware,
