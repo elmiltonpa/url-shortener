@@ -67,7 +67,10 @@ const copyToClipboard = async () => {
                     variant="ghost"
                     size="sm"
                     type="button"
-                    aria-label="View analytics"
+                    disabled
+                    aria-label="View analytics (coming soon)"
+                    title="Analytics coming soon"
+                    class="opacity-50 cursor-not-allowed"
                 >
                     <BarChart3 class="h-3.5 w-3.5" />
                 </Button>

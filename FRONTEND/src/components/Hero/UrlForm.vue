@@ -2,18 +2,21 @@
 import { ref, reactive } from "vue";
 import { Link2, ArrowRight } from "lucide-vue-next";
 import Button from "../ui/Button/Button.vue";
-import ShortenResult from "./ShortenResult.vue";
 import { actions, isActionError, isInputError } from "astro:actions";
+import { useUrlHistory } from "../../composables/useUrlHistory.ts";
+import type { UrlData } from "../../types/url";
+
+const props = defineProps<{
+    isLoggedIn: boolean;
+}>();
+
+const emit = defineEmits<{
+    (e: "linkCreated", link: UrlData | null): void;
+}>();
 
 interface ActionState {
     error: string | null;
-    data: {
-        short_code: string;
-        original_url: string;
-        short_url: string;
-        created_at: string;
-        expires_at: string;
-    } | null;
+    data: UrlData | null;
 }
 
 const url = ref("");
@@ -22,6 +25,8 @@ const state = reactive<ActionState>({
     error: null,
     data: null,
 });
+
+const { addUrl } = useUrlHistory();
 
 const handleSubmit = async () => {
     if (!url.value.trim() || isPending.value) return;
@@ -40,6 +45,12 @@ const handleSubmit = async () => {
                   ? error.message
                   : "An unexpected error occurred";
         } else if (data) {
+            if (!props.isLoggedIn) {
+                addUrl(data);
+            }
+
+            emit("linkCreated", data);
+
             state.data = data;
             url.value = "";
         }
@@ -109,19 +120,6 @@ const handleSubmit = async () => {
             >
                 {{ state.error }}
             </p>
-        </transition>
-
-        <transition
-            enter-active-class="transition duration-300 ease-out"
-            enter-from-class="transform translate-y-4 opacity-0"
-            enter-to-class="transform translate-y-0 opacity-100"
-        >
-            <div v-if="state.data" class="mt-6">
-                <ShortenResult
-                    :shortenedLink="state.data.short_url"
-                    :originalUrl="state.data.original_url"
-                />
-            </div>
         </transition>
     </div>
 </template>

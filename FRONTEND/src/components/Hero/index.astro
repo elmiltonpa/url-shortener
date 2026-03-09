@@ -1,13 +1,36 @@
 ---
 import HeroHeader from "./HeroHeader.astro";
-import UrlForm from "./UrlForm.vue";
+import UrlManager from "./UrlManager.vue";
+import { actions } from "astro:actions";
+
+const token = Astro.cookies.get("auth_token");
+const isLoggedIn = !!token;
+
+let initialServerLinks = undefined;
+
+if (isLoggedIn) {
+  const { data, error } = await Astro.callAction(actions.getUserUrls, {
+    page: 1,
+    per_page: 10,
+  });
+
+  if (error) {
+    console.error("[Hero] Failed to fetch user URLs:", error.message);
+  } else {
+    initialServerLinks = data?.urls;
+  }
+}
 ---
 
 <section
-    class="relative flex min-h-[90vh] flex-col items-center justify-center px-6 pt-16"
+  class="relative flex min-h-[90vh] flex-col items-center px-6 pt-[15vh] md:pt-[20vh]"
 >
-    <div class="relative z-10 flex max-w-2xl flex-col items-center text-center">
-        <HeroHeader />
-        <UrlForm client:visible />
-    </div>
+  <div class="relative z-10 flex max-w-2xl flex-col items-center text-center">
+    <HeroHeader />
+    <UrlManager
+      client:load
+      isLoggedIn={isLoggedIn}
+      initialServerLinks={initialServerLinks}
+    />
+  </div>
 </section>
