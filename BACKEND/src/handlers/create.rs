@@ -49,6 +49,7 @@ pub async fn create_url(
         short_code: url_model.short_code,
         original_url: url_model.original_url,
         short_url,
+        click_count: url_model.click_count,
         created_at: url_model.created_at,
         expires_at: url_model.expires_at,
     };

@@ -159,6 +159,7 @@ impl UrlService {
                 short_url: format!("{}/{}", app_domain, url.short_code),
                 original_url: url.original_url,
                 short_code: url.short_code,
+                click_count: url.click_count,
                 created_at: url.created_at,
                 expires_at: url.expires_at,
             })

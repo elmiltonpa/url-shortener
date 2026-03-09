@@ -43,6 +43,7 @@ pub struct UrlResponse {
     pub short_code: String,
     pub original_url: String,
     pub short_url: String,
+    pub click_count: i64,
     pub created_at: DateTime<Utc>,
     pub expires_at: Option<DateTime<Utc>>,
 }
