@@ -8,7 +8,7 @@ use uuid::Uuid;
 
 use crate::{
     error::{AppError, AppResult},
-    models::url::PaginationQuery,
+    models::url::{ClaimUrlsRequest, ClaimUrlsResponse, PaginationQuery},
     state::AppState,
 };
 
@@ -30,4 +30,24 @@ pub async fn list_user_urls(
         .await?;
 
     Ok(Json(result))
+}
+
+pub async fn claim_urls(
+    State(state): State<Arc<AppState>>,
+    Extension(user_id): Extension<String>,
+    Json(payload): Json<ClaimUrlsRequest>,
+) -> AppResult<impl IntoResponse> {
+    let caller_id = Uuid::parse_str(&user_id)
+        .map_err(|_| AppError::ValidationError("Invalid user ID in token".to_string()))?;
+
+    let count = state
+        .url_service
+        .claim_urls(caller_id, payload.codes)
+        .await?;
+
+    Ok(Json(ClaimUrlsResponse {
+        success: true,
+        message: "Links linked to your account".into(),
+        count,
+    }))
 }
