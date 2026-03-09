@@ -21,7 +21,6 @@ async function handleBackendResponse(response: Response, defaultError: string) {
     try {
       errorData = await response.json();
     } catch {
-      // Backend returned non-JSON (likely HTML error page or empty body)
       console.error(
         `[backend] Non-JSON error response: ${response.status} ${response.statusText}`,
       );
@@ -63,9 +62,6 @@ function setAuthCookies(cookies: AstroCookies, data: AuthResponse): void {
 
   cookies.set("user_data", JSON.stringify(data.user), {
     ...AUTH_COOKIE_OPTIONS,
-    // httpOnly: true — inherited from AUTH_COOKIE_OPTIONS
-    // This cookie is NOT readable by client-side JavaScript.
-    // User data for the client is passed via Astro.locals -> component props.
   });
 }
 
@@ -75,6 +71,46 @@ function clearAuthCookies(cookies: AstroCookies): void {
 }
 
 export const server = {
+  getUserUrls: defineAction({
+    input: z.object({
+      page: z.number().optional().default(1),
+      per_page: z.number().optional().default(10),
+    }),
+    handler: async (input, context) => {
+      const apiUrl = getApiUrl();
+
+      try {
+        const token = context.cookies.get("auth_token")?.value;
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json",
+        };
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+
+        const response = await fetch(
+          `${apiUrl}/user/urls?page=${input.page}&per_page=${input.per_page}`,
+          {
+            method: "GET",
+            headers,
+          },
+        );
+
+        const data = await handleBackendResponse(
+          response,
+          "Failed to fetch user URLs",
+        );
+
+        return data;
+      } catch (e) {
+        if (e instanceof ActionError) throw e;
+        console.error("[getUserUrls] Failed to reach backend:", e);
+        throw new ActionError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to connect to the shortening service",
+        });
+      }
+    },
+  }),
+
   shortenUrl: defineAction({
     input: z.object({
       url: z.preprocess(
@@ -126,7 +162,6 @@ export const server = {
           "Backend failed to process the URL",
         );
 
-        // Build short URL using the frontend's origin instead of the backend's
         const frontendOrigin = new URL(context.request.url).origin;
 
         return {
