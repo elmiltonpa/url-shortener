@@ -71,6 +71,41 @@ function clearAuthCookies(cookies: AstroCookies): void {
 }
 
 export const server = {
+  claimAnonymousUrls: defineAction({
+    input: z.object({
+      codes: z.array(z.string()),
+    }),
+    handler: async (input, context) => {
+      const apiUrl = getApiUrl();
+      const token = context.cookies.get("auth_token")?.value;
+
+      if (!token)
+        throw new ActionError({
+          code: "UNAUTHORIZED",
+          message: "Not authenticated",
+        });
+
+      try {
+        const response = await fetch(`${apiUrl}/user/claim`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(input),
+        });
+
+        return await handleBackendResponse(response, "Failed to claim URLs");
+      } catch (e) {
+        if (e instanceof ActionError) throw e;
+        throw new ActionError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Connection error",
+        });
+      }
+    },
+  }),
+
   getUserUrls: defineAction({
     input: z.object({
       page: z.number().optional().default(1),
@@ -168,6 +203,7 @@ export const server = {
           short_code: data.short_code,
           original_url: data.original_url,
           short_url: `${frontendOrigin}/${data.short_code}`,
+          click_count: data.click_count,
           created_at: data.created_at,
           expires_at: data.expires_at,
         };

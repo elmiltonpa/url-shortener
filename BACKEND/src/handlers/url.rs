@@ -45,6 +45,10 @@ pub async fn claim_urls(
         .claim_urls(caller_id, payload.codes)
         .await?;
 
+    if count > 0 {
+        tracing::info!("User {} successfully claimed {} URLs", caller_id, count);
+    }
+
     Ok(Json(ClaimUrlsResponse {
         success: true,
         message: "Links linked to your account".into(),
