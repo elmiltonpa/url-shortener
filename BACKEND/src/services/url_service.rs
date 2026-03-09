@@ -224,6 +224,10 @@ impl UrlService {
         })
     }
 
+    pub async fn claim_urls(&self, user_id: Uuid, codes: Vec<String>) -> AppResult<u64> {
+        self.url_repository.update_links(user_id, codes).await
+    }
+
     fn truncate(value: Option<String>, max_len: usize) -> Option<String> {
         value.map(|s| {
             if s.len() > max_len {

@@ -248,4 +248,21 @@ impl UrlRepository {
         .await?;
         Ok(row.0)
     }
+
+    pub async fn update_links(&self, user_id: Uuid, short_codes: Vec<String>) -> AppResult<u64> {
+        let result = sqlx::query(
+            r#"
+            UPDATE urls
+            SET user_id = $1
+            WHERE short_code = ANY($2)
+            AND user_id IS NULL;
+            "#,
+        )
+        .bind(user_id)
+        .bind(short_codes)
+        .execute(self.pool())
+        .await?;
+
+        Ok(result.rows_affected())
+    }
 }

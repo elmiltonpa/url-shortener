@@ -17,6 +17,18 @@ pub struct UrlModel {
     pub expires_at: Option<DateTime<Utc>>,
 }
 
+#[derive(Deserialize)]
+pub struct ClaimUrlsRequest {
+    pub codes: Vec<String>,
+}
+
+#[derive(Serialize)]
+pub struct ClaimUrlsResponse {
+    pub success: bool,
+    pub message: String,
+    pub count: u64,
+}
+
 #[derive(Deserialize, Validate)]
 pub struct UrlRequest {
     #[validate(
