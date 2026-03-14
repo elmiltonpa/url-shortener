@@ -1,30 +1,87 @@
 <script setup lang="ts">
+import { ref, computed } from "vue";
 import {
     Copy,
     ExternalLink,
     BarChart3,
     Trash2,
     MoreVertical,
+    ChevronLeft,
+    ChevronRight,
+    Check,
+    X,
+    Loader2,
 } from "lucide-vue-next";
 import type { UrlData } from "../../types/url";
+import { formatDate, getExpiryBadge } from "../../utils/formatters";
+import type { ExpiryBadge } from "../../utils/formatters";
 import Button from "../ui/Button/Button.vue";
 
-defineProps<{
+const props = defineProps<{
     urls: UrlData[];
     loading: boolean;
+    currentPage: number;
+    totalPages: number;
+    deletingCodes?: Set<string>;
 }>();
 
-const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-};
+const emit = defineEmits<{
+    (e: "viewStats", shortCode: string): void;
+    (e: "deleteUrl", shortCode: string): void;
+    (e: "changePage", page: number): void;
+}>();
 
-const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString(undefined, {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
+const copiedCode = ref<string | null>(null);
+
+const copyToClipboard = (text: string, code: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+        copiedCode.value = code;
+        setTimeout(() => (copiedCode.value = null), 1500);
     });
 };
+
+const pendingDeleteCode = ref<string | null>(null);
+
+const requestDelete = (shortCode: string) => {
+    pendingDeleteCode.value = shortCode;
+};
+
+const cancelDelete = () => {
+    pendingDeleteCode.value = null;
+};
+
+const confirmDelete = (shortCode: string) => {
+    pendingDeleteCode.value = null;
+    emit("deleteUrl", shortCode);
+};
+
+type UrlRowWithBadge = UrlData & { expiryBadge: ExpiryBadge | null };
+
+const urlsWithBadges = computed<UrlRowWithBadge[]>(() =>
+    props.urls.map((url) => ({
+        ...url,
+        expiryBadge: getExpiryBadge(url.expires_at),
+    })),
+);
+
+const visiblePages = computed(() => {
+    const total = props.totalPages;
+    const current = props.currentPage;
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+
+    const pages: (number | "…")[] = [1];
+    if (current > 3) pages.push("…");
+    for (
+        let p = Math.max(2, current - 1);
+        p <= Math.min(total - 1, current + 1);
+        p++
+    ) {
+        pages.push(p);
+    }
+    if (current < total - 2) pages.push("…");
+    pages.push(total);
+    return pages;
+});
 </script>
 
 <template>
@@ -67,32 +124,27 @@ const formatDate = (dateStr: string) => {
                         <template v-if="loading">
                             <tr v-for="i in 5" :key="i" class="animate-pulse">
                                 <td class="px-6 py-4">
-                                    <div
-                                        class="h-4 w-48 bg-muted rounded"
-                                    ></div>
+                                    <div class="h-4 w-48 bg-muted rounded" />
                                 </td>
                                 <td class="px-6 py-4">
-                                    <div
-                                        class="h-4 w-32 bg-muted rounded"
-                                    ></div>
+                                    <div class="h-4 w-32 bg-muted rounded" />
                                 </td>
                                 <td class="px-6 py-4">
                                     <div
                                         class="mx-auto h-4 w-8 bg-muted rounded"
-                                    ></div>
+                                    />
                                 </td>
                                 <td class="px-6 py-4">
-                                    <div
-                                        class="h-4 w-24 bg-muted rounded"
-                                    ></div>
+                                    <div class="h-4 w-24 bg-muted rounded" />
                                 </td>
                                 <td class="px-6 py-4">
                                     <div
                                         class="ml-auto h-8 w-24 bg-muted rounded"
-                                    ></div>
+                                    />
                                 </td>
                             </tr>
                         </template>
+
                         <template v-else-if="urls.length === 0">
                             <tr>
                                 <td
@@ -104,37 +156,61 @@ const formatDate = (dateStr: string) => {
                                 </td>
                             </tr>
                         </template>
+
                         <template v-else>
                             <tr
-                                v-for="url in urls"
+                                v-for="url in urlsWithBadges"
                                 :key="url.short_code"
                                 class="group transition-colors hover:bg-muted/30"
+                                :class="{
+                                    'opacity-60': deletingCodes?.has(
+                                        url.short_code,
+                                    ),
+                                }"
                             >
                                 <td class="px-6 py-4">
                                     <div class="flex flex-col max-w-md">
                                         <span
                                             class="text-sm font-medium truncate text-foreground"
-                                            >{{ url.original_url }}</span
                                         >
+                                            {{ url.original_url }}
+                                        </span>
                                     </div>
                                 </td>
+
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-2">
                                         <code
                                             class="text-xs bg-rust/10 text-rust px-2 py-1 rounded font-mono"
-                                            >/{{ url.short_code }}</code
                                         >
+                                            /{{ url.short_code }}
+                                        </code>
                                         <button
                                             @click="
-                                                copyToClipboard(url.short_url)
+                                                copyToClipboard(
+                                                    url.short_url,
+                                                    url.short_code,
+                                                )
                                             "
                                             class="text-muted-foreground hover:text-rust transition-colors cursor-pointer"
-                                            title="Copy short link"
+                                            :title="
+                                                copiedCode === url.short_code
+                                                    ? 'Copied!'
+                                                    : 'Copy short link'
+                                            "
                                         >
-                                            <Copy class="h-3.5 w-3.5" />
+                                            <Check
+                                                v-if="
+                                                    copiedCode ===
+                                                    url.short_code
+                                                "
+                                                class="h-3.5 w-3.5 text-emerald-500"
+                                            />
+                                            <Copy v-else class="h-3.5 w-3.5" />
                                         </button>
                                     </div>
                                 </td>
+
                                 <td class="px-6 py-4 text-center">
                                     <span
                                         class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-rust/10 text-rust"
@@ -142,68 +218,226 @@ const formatDate = (dateStr: string) => {
                                         {{ url.click_count }}
                                     </span>
                                 </td>
+
                                 <td
                                     class="px-6 py-4 text-sm text-muted-foreground whitespace-nowrap"
                                 >
-                                    {{ formatDate(url.created_at) }}
+                                    <div class="flex flex-col gap-1">
+                                        <span>{{
+                                            formatDate(url.created_at)
+                                        }}</span>
+                                        <span
+                                            v-if="url.expiryBadge"
+                                            class="inline-flex self-start items-center px-1.5 py-0.5 rounded text-[10px] font-semibold border"
+                                            :class="url.expiryBadge.cls"
+                                        >
+                                            {{ url.expiryBadge.label }}
+                                        </span>
+                                    </div>
                                 </td>
+
                                 <td
                                     class="px-6 py-4 text-right whitespace-nowrap"
                                 >
-                                    <div
-                                        class="relative flex items-center justify-end h-8 min-w-30"
+                                    <Transition
+                                        enter-active-class="transition duration-150 ease-out"
+                                        enter-from-class="opacity-0 scale-95"
+                                        enter-to-class="opacity-100 scale-100"
+                                        leave-active-class="transition duration-100 ease-in"
+                                        leave-from-class="opacity-100 scale-100"
+                                        leave-to-class="opacity-0 scale-95"
+                                        mode="out-in"
                                     >
                                         <div
-                                            class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200 translate-x-2 group-hover:translate-x-0"
+                                            v-if="
+                                                pendingDeleteCode ===
+                                                url.short_code
+                                            "
+                                            key="confirm"
+                                            class="flex items-center justify-end gap-1"
                                         >
-                                            <a
-                                                :href="url.short_url"
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                title="Open Link"
+                                            <span
+                                                class="text-xs text-muted-foreground mr-1 font-medium"
                                             >
+                                                Delete?
+                                            </span>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                title="Confirm delete"
+                                                class="h-7 w-7 text-red-500 hover:text-red-400 hover:bg-red-500/10 cursor-pointer"
+                                                :disabled="
+                                                    deletingCodes?.has(
+                                                        url.short_code,
+                                                    )
+                                                "
+                                                @click="
+                                                    confirmDelete(
+                                                        url.short_code,
+                                                    )
+                                                "
+                                            >
+                                                <Loader2
+                                                    v-if="
+                                                        deletingCodes?.has(
+                                                            url.short_code,
+                                                        )
+                                                    "
+                                                    class="h-3.5 w-3.5 animate-spin"
+                                                />
+                                                <Check
+                                                    v-else
+                                                    class="h-3.5 w-3.5"
+                                                />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                title="Cancel"
+                                                class="h-7 w-7 text-muted-foreground hover:text-foreground cursor-pointer"
+                                                @click="cancelDelete"
+                                            >
+                                                <X class="h-3.5 w-3.5" />
+                                            </Button>
+                                        </div>
+
+                                        <div
+                                            v-else
+                                            key="actions"
+                                            class="relative flex items-center justify-end h-8 min-w-30"
+                                        >
+                                            <div
+                                                class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200 translate-x-2 group-hover:translate-x-0"
+                                            >
+                                                <a
+                                                    :href="url.short_url"
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    title="Open link"
+                                                >
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        class="h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer"
+                                                    >
+                                                        <ExternalLink
+                                                            class="h-4 w-4"
+                                                        />
+                                                    </Button>
+                                                </a>
+
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
-                                                    class="h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer"
+                                                    title="View stats"
+                                                    class="h-8 w-8 text-muted-foreground hover:text-rust cursor-pointer"
+                                                    @click="
+                                                        emit(
+                                                            'viewStats',
+                                                            url.short_code,
+                                                        )
+                                                    "
                                                 >
-                                                    <ExternalLink
+                                                    <BarChart3
                                                         class="h-4 w-4"
                                                     />
                                                 </Button>
-                                            </a>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                title="View Stats"
-                                                class="h-8 w-8 text-muted-foreground hover:text-rust cursor-pointer"
-                                            >
-                                                <BarChart3 class="h-4 w-4" />
-                                            </Button>
 
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                title="Delete (Coming Soon)"
-                                                class="h-8 w-8 text-muted-foreground/30 cursor-not-allowed"
-                                            >
-                                                <Trash2 class="h-4 w-4" />
-                                            </Button>
-                                        </div>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    title="Delete link"
+                                                    class="h-8 w-8 text-muted-foreground hover:text-red-500 cursor-pointer"
+                                                    :disabled="
+                                                        deletingCodes?.has(
+                                                            url.short_code,
+                                                        )
+                                                    "
+                                                    @click="
+                                                        requestDelete(
+                                                            url.short_code,
+                                                        )
+                                                    "
+                                                >
+                                                    <Loader2
+                                                        v-if="
+                                                            deletingCodes?.has(
+                                                                url.short_code,
+                                                            )
+                                                        "
+                                                        class="h-4 w-4 animate-spin"
+                                                    />
+                                                    <Trash2
+                                                        v-else
+                                                        class="h-4 w-4"
+                                                    />
+                                                </Button>
+                                            </div>
 
-                                        <div
-                                            class="absolute right-0 opacity-100 group-hover:opacity-0 transition-opacity duration-200 pointer-events-none"
-                                        >
-                                            <MoreVertical
-                                                class="h-4 w-4 text-muted-foreground/40"
-                                            />
+                                            <div
+                                                class="absolute right-0 opacity-100 group-hover:opacity-0 transition-opacity duration-200 pointer-events-none"
+                                            >
+                                                <MoreVertical
+                                                    class="h-4 w-4 text-muted-foreground/40"
+                                                />
+                                            </div>
                                         </div>
-                                    </div>
+                                    </Transition>
                                 </td>
                             </tr>
                         </template>
                     </tbody>
                 </table>
+            </div>
+        </div>
+
+        <div
+            v-if="!loading && totalPages > 1"
+            class="flex items-center justify-between mt-4 px-1"
+        >
+            <p class="text-xs text-muted-foreground">
+                Page {{ currentPage }} of {{ totalPages }}
+            </p>
+
+            <div class="flex items-center gap-1">
+                <button
+                    class="h-8 w-8 flex items-center justify-center rounded-lg border border-border bg-card/50 text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                    :disabled="currentPage <= 1"
+                    @click="emit('changePage', currentPage - 1)"
+                    aria-label="Previous page"
+                >
+                    <ChevronLeft class="h-4 w-4" />
+                </button>
+
+                <template v-for="p in visiblePages" :key="String(p)">
+                    <span
+                        v-if="p === '…'"
+                        class="h-8 w-8 flex items-center justify-center text-xs text-muted-foreground select-none"
+                    >
+                        …
+                    </span>
+                    <button
+                        v-else
+                        class="h-8 w-8 flex items-center justify-center rounded-lg border text-xs font-medium transition-colors cursor-pointer"
+                        :class="
+                            p === currentPage
+                                ? 'bg-rust text-white border-rust shadow-sm'
+                                : 'border-border bg-card/50 text-muted-foreground hover:text-foreground hover:bg-muted'
+                        "
+                        @click="emit('changePage', p as number)"
+                    >
+                        {{ p }}
+                    </button>
+                </template>
+
+                <button
+                    class="h-8 w-8 flex items-center justify-center rounded-lg border border-border bg-card/50 text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                    :disabled="currentPage >= totalPages"
+                    @click="emit('changePage', currentPage + 1)"
+                    aria-label="Next page"
+                >
+                    <ChevronRight class="h-4 w-4" />
+                </button>
             </div>
         </div>
     </div>

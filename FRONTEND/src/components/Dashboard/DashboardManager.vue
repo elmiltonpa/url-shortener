@@ -1,23 +1,64 @@
 <script setup lang="ts">
+import { ref } from "vue";
 import { useDashboard } from "../../composables/useDashboard";
+import { useToast } from "../../composables/useToast";
 import DashboardHeader from "./DashboardHeader.vue";
 import UrlStats from "./UrlStats.vue";
 import DashboardFilters from "./DashboardFilters.vue";
 import UrlTable from "./UrlTable.vue";
+import UrlStatsModal from "./UrlStatsModal.vue";
+import ToastContainer from "../ui/ToastContainer.vue";
 
 const {
     loading,
     searchQuery,
     filteredUrls,
+    paginatedUrls,
     stats,
+    currentPage,
+    totalPages,
+    deletingCodes,
     fetchUrls,
+    deleteUrl,
+    setPage,
     errorMessage,
 } = useDashboard();
+
+const { success, error } = useToast();
+
+const selectedStatCode = ref<string | null>(null);
+
+const handleViewStats = (shortCode: string) => {
+    selectedStatCode.value = shortCode;
+};
+
+const handleCloseStats = () => {
+    selectedStatCode.value = null;
+};
+
+const handleDeleteUrl = async (shortCode: string) => {
+    const ok = await deleteUrl(shortCode);
+    if (ok) {
+        success(`Link /${shortCode} deleted successfully.`);
+    } else {
+        error(`Failed to delete /${shortCode}. Please try again.`);
+    }
+};
+
+const handleChangePage = (page: number) => {
+    setPage(page);
+};
 </script>
 
 <template>
-    <div class="py-8">
-        <!-- Error State -->
+    <div class="pt-24 pb-16 min-h-screen">
+        <ToastContainer />
+
+        <UrlStatsModal
+            :short-code="selectedStatCode"
+            @close="handleCloseStats"
+        />
+
         <div
             v-if="errorMessage"
             class="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mb-8 animate-in fade-in slide-in-from-top-4 duration-300"
@@ -59,6 +100,15 @@ const {
             :loading="loading"
         />
 
-        <UrlTable :urls="filteredUrls" :loading="loading" />
+        <UrlTable
+            :urls="paginatedUrls"
+            :loading="loading"
+            :currentPage="currentPage"
+            :totalPages="totalPages"
+            :deletingCodes="deletingCodes"
+            @viewStats="handleViewStats"
+            @deleteUrl="handleDeleteUrl"
+            @changePage="handleChangePage"
+        />
     </div>
 </template>

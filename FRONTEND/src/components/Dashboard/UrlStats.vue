@@ -38,9 +38,8 @@ defineProps<{
             <div class="mt-4 flex items-center text-xs text-muted-foreground">
                 <span class="flex items-center gap-1 text-rust">
                     <TrendingUp class="h-3 w-3" />
-                    +{{ stats.total_links }}
                 </span>
-                <span class="ml-1.5">all time links</span>
+                <span>All time</span>
             </div>
         </div>
 
