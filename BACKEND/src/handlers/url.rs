@@ -1,6 +1,7 @@
 use axum::{
     Extension, Json,
-    extract::{Query, State},
+    extract::{Path, Query, State},
+    http::StatusCode,
     response::IntoResponse,
 };
 use std::sync::Arc;
@@ -30,6 +31,19 @@ pub async fn list_user_urls(
         .await?;
 
     Ok(Json(result))
+}
+
+pub async fn delete_url(
+    State(state): State<Arc<AppState>>,
+    Extension(user_id): Extension<String>,
+    Path(code): Path<String>,
+) -> AppResult<impl IntoResponse> {
+    let caller_id = Uuid::parse_str(&user_id)
+        .map_err(|_| AppError::ValidationError("Invalid user ID in token".to_string()))?;
+
+    state.url_service.delete_url(&code, caller_id).await?;
+
+    Ok(StatusCode::NO_CONTENT)
 }
 
 pub async fn claim_urls(

@@ -229,6 +229,14 @@ impl UrlService {
         self.url_repository.update_links(user_id, codes).await
     }
 
+    pub async fn delete_url(&self, code: &str, user_id: Uuid) -> AppResult<()> {
+        let deleted = self.url_repository.delete_url(code, user_id).await?;
+        if !deleted {
+            return Err(AppError::NotFound);
+        }
+        Ok(())
+    }
+
     fn truncate(value: Option<String>, max_len: usize) -> Option<String> {
         value.map(|s| {
             if s.len() > max_len {

@@ -265,4 +265,19 @@ impl UrlRepository {
 
         Ok(result.rows_affected())
     }
+
+    pub async fn delete_url(&self, short_code: &str, user_id: Uuid) -> AppResult<bool> {
+        let result = sqlx::query(
+            r#"
+            DELETE FROM urls
+            WHERE short_code = $1 AND user_id = $2
+            "#,
+        )
+        .bind(short_code)
+        .bind(user_id)
+        .execute(self.pool())
+        .await?;
+
+        Ok(result.rows_affected() > 0)
+    }
 }

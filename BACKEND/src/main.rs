@@ -12,7 +12,7 @@ use crate::middleware::auth::auth_middleware;
 use crate::state::AppState;
 use axum::{
     Router,
-    routing::{get, post},
+    routing::{delete, get, post},
 };
 use sqlx::postgres::PgPoolOptions;
 use std::{sync::Arc, time::Duration};
@@ -96,6 +96,7 @@ async fn main() {
     let private_routes = Router::new()
         .route("/stats/{code}", get(handlers::stats::get_stats))
         .route("/user/urls", get(handlers::url::list_user_urls))
+        .route("/user/urls/{code}", delete(handlers::url::delete_url))
         .route("/user/claim", post(handlers::url::claim_urls))
         .layer(axum::middleware::from_fn_with_state(
             state.clone(),
