@@ -17,7 +17,7 @@ interface Props {
 }
 
 const props = defineProps<Props>();
-const attrs = useAttrs(); // Captura atributos como target="_blank", etc.
+const attrs = useAttrs();
 </script>
 
 <template>
@@ -39,7 +39,6 @@ const attrs = useAttrs(); // Captura atributos como target="_blank", etc.
 </template>
 
 <script lang="ts">
-// Evitamos que los atributos se dupliquen en el elemento raíz si hubiera más de uno
 export default {
     inheritAttrs: false,
 };
