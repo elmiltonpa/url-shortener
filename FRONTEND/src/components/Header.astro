@@ -15,7 +15,17 @@ const { user } = Astro.locals;
         <nav class="flex items-center gap-3">
             {
                 user ? (
-                    <UserMenu client:load user={user} />
+                    <div class="flex items-center gap-3">
+                        <LinkButton
+                            href="/"
+                            variant="ghost"
+                            size="sm"
+                            class="hidden sm:inline-flex font-medium hover:text-rust transition-colors"
+                        >
+                            Home
+                        </LinkButton>
+                        <UserMenu client:load user={user} />
+                    </div>
                 ) : (
                     <>
                         <LinkButton href="/login" variant="ghost" size="sm">

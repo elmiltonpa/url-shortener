@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive } from "vue";
-import { Link2, ArrowRight } from "lucide-vue-next";
+import { Link2, ArrowRight, LayoutDashboard } from "lucide-vue-next";
 import Button from "../ui/Button/Button.vue";
 import { actions, isActionError, isInputError } from "astro:actions";
 import { useUrlHistory } from "../../composables/useUrlHistory.ts";
@@ -120,6 +120,32 @@ const handleSubmit = async () => {
             >
                 {{ state.error }}
             </p>
+        </transition>
+
+        <transition
+            enter-active-class="transition duration-300 ease-out"
+            enter-from-class="transform -translate-y-2 opacity-0"
+            enter-to-class="transform translate-y-0 opacity-100"
+            leave-active-class="transition duration-150 ease-in"
+            leave-from-class="opacity-100"
+            leave-to-class="opacity-0"
+        >
+            <div
+                v-if="state.data && isLoggedIn"
+                class="mt-3 flex items-center justify-between gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-2.5"
+            >
+                <p class="text-sm text-emerald-500 font-medium">
+                    Link created successfully!
+                </p>
+                <a
+                    href="/dashboard"
+                    class="flex items-center gap-1.5 text-sm font-semibold text-emerald-500 hover:text-emerald-400 transition-colors shrink-0"
+                >
+                    <LayoutDashboard class="h-3.5 w-3.5" />
+                    View in Dashboard
+                    <ArrowRight class="h-3.5 w-3.5" />
+                </a>
+            </div>
         </transition>
     </div>
 </template>

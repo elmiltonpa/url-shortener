@@ -5,7 +5,7 @@ import {
     LogOut,
     ChevronDown,
     LayoutDashboard,
-    Settings,
+    Home,
 } from "lucide-vue-next";
 import { actions } from "astro:actions";
 import Button from "./Button/Button.vue";
@@ -80,20 +80,20 @@ const handleLogout = async () => {
             </div>
 
             <a
+                href="/"
+                class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-foreground/80 hover:bg-accent hover:text-foreground transition-colors"
+            >
+                <Home class="w-4 h-4" />
+                Home
+            </a>
+
+            <a
                 href="/dashboard"
                 class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-foreground/80 hover:bg-accent hover:text-foreground transition-colors"
             >
                 <LayoutDashboard class="w-4 h-4" />
                 Dashboard
             </a>
-
-            <!-- <a
-                href="/settings"
-                class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-foreground/80 hover:bg-accent hover:text-foreground transition-colors"
-            >
-                <Settings class="w-4 h-4" />
-                Settings
-            </a> -->
 
             <div class="h-px bg-border/30 my-1 mx-1"></div>
 
