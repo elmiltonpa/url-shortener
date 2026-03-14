@@ -49,7 +49,7 @@ const AUTH_COOKIE_OPTIONS = {
   httpOnly: true,
   secure: import.meta.env.PROD,
   sameSite: "lax",
-  maxAge: 60 * 60 * 24, // 24 hours
+  maxAge: 60 * 60 * 24,
 } as const;
 
 interface AuthResponse {
@@ -321,6 +321,84 @@ export const server = {
     handler: async (_, context) => {
       clearAuthCookies(context.cookies);
       return { success: true };
+    },
+  }),
+
+  getUrlStats: defineAction({
+    input: z.object({
+      code: z.string().min(1),
+      page: z.number().optional().default(1),
+      per_page: z.number().optional().default(20),
+    }),
+    handler: async (input, context) => {
+      const apiUrl = getApiUrl();
+      const token = context.cookies.get("auth_token")?.value;
+
+      if (!token)
+        throw new ActionError({
+          code: "UNAUTHORIZED",
+          message: "Not authenticated",
+        });
+
+      try {
+        const response = await fetch(
+          `${apiUrl}/stats/${input.code}?page=${input.page}&per_page=${input.per_page}`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+
+        return await handleBackendResponse(
+          response,
+          "Failed to fetch URL stats",
+        );
+      } catch (e) {
+        if (e instanceof ActionError) throw e;
+        console.error("[getUrlStats] Failed to reach backend:", e);
+        throw new ActionError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to connect to the service",
+        });
+      }
+    },
+  }),
+
+  deleteUrl: defineAction({
+    input: z.object({
+      code: z.string().min(1),
+    }),
+    handler: async (input, context) => {
+      const apiUrl = getApiUrl();
+      const token = context.cookies.get("auth_token")?.value;
+
+      if (!token)
+        throw new ActionError({
+          code: "UNAUTHORIZED",
+          message: "Not authenticated",
+        });
+
+      try {
+        const response = await fetch(`${apiUrl}/user/urls/${input.code}`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (response.status === 204) return { success: true };
+
+        return await handleBackendResponse(response, "Failed to delete URL");
+      } catch (e) {
+        if (e instanceof ActionError) throw e;
+        console.error("[deleteUrl] Failed to reach backend:", e);
+        throw new ActionError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to connect to the service",
+        });
+      }
     },
   }),
 };
