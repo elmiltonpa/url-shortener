@@ -5,6 +5,10 @@ import type { UrlData } from "../../types/url";
 defineProps<{
     links: readonly UrlData[];
 }>();
+
+const emit = defineEmits<{
+    (e: 'view-stats', code: string): void;
+}>();
 </script>
 
 <template>
@@ -23,6 +27,8 @@ defineProps<{
                 :key="link.short_code"
                 :shortenedLink="link.short_url"
                 :originalUrl="link.original_url"
+                :shortCode="link.short_code"
+                @view-stats="(code) => emit('view-stats', code)"
             />
         </TransitionGroup>
     </div>

@@ -4,6 +4,7 @@ import { actions } from "astro:actions";
 import { Loader2 } from "lucide-vue-next";
 import UrlForm from "./UrlForm.vue";
 import UrlList from "./UrlList.vue";
+import UrlStatsModal from "../Dashboard/UrlStatsModal.vue";
 import { useUrlHistory } from "../../composables/useUrlHistory.ts";
 import type { UrlData } from "../../types/url";
 
@@ -16,6 +17,7 @@ const { history: localHistory, clearHistory } = useUrlHistory();
 
 const serverLinks = ref<UrlData[]>(props.initialServerLinks || []);
 const isSyncing = ref(false);
+const selectedUrlStats = ref<string | null>(null);
 
 const displayLinks = computed((): readonly UrlData[] => {
     return props.isLoggedIn ? serverLinks.value : localHistory.value;
@@ -71,6 +73,12 @@ const handleLinkCreated = (newLink: UrlData | null) => {
             v-else-if="displayLinks.length > 0" 
             :links="displayLinks" 
             :class="{ 'opacity-50 pointer-events-none transition-opacity': isSyncing }"
+            @view-stats="(code) => selectedUrlStats = code"
+        />
+
+        <UrlStatsModal 
+            :short-code="selectedUrlStats" 
+            @close="selectedUrlStats = null" 
         />
     </div>
 </template>
