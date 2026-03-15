@@ -197,7 +197,9 @@ export const server = {
           "Backend failed to process the URL",
         );
 
-        const frontendOrigin = new URL(context.request.url).origin;
+        const frontendOrigin =
+          import.meta.env.PUBLIC_APP_DOMAIN ||
+          new URL(context.request.url).origin;
 
         return {
           short_code: data.short_code,

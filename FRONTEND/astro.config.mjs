@@ -20,6 +20,11 @@ export default defineConfig({
         access: "public",
         optional: true,
       }),
+      PUBLIC_APP_DOMAIN: envField.string({
+        context: "server",
+        access: "public",
+        optional: true,
+      }),
     },
   },
   vite: {
