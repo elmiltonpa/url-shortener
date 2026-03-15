@@ -8,7 +8,9 @@ export const GET: APIRoute = (context) => {
     return context.redirect("/error?code=500", 302);
   }
 
-  const redirectUri = `${context.url.origin}/auth/google/callback`;
+  const redirectUri =
+    import.meta.env.PUBLIC_GOOGLE_REDIRECT_URI ||
+    `${context.url.origin}/auth/google/callback`;
   const state = generateOAuthState(context.cookies);
   const googleUrl = buildGoogleAuthUrl(clientId, redirectUri, state);
 

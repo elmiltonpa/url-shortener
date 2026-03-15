@@ -11,6 +11,15 @@ export default defineConfig({
   env: {
     schema: {
       API_URL: envField.string({ context: "server", access: "secret" }),
+      PUBLIC_GOOGLE_CLIENT_ID: envField.string({
+        context: "server",
+        access: "public",
+      }),
+      PUBLIC_GOOGLE_REDIRECT_URI: envField.string({
+        context: "server",
+        access: "public",
+        optional: true,
+      }),
     },
   },
   vite: {
