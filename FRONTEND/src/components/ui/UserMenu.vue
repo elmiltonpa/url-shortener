@@ -48,7 +48,7 @@ const handleLogout = async () => {
     <div class="relative user-menu-container">
         <button
             @click="toggleMenu"
-            class="flex items-center gap-2 p-1.5 pl-3 rounded-full border border-border/50 bg-card/30 hover:bg-card/50 transition-all active:scale-[0.98] group"
+            class="flex items-center gap-2 p-1.5 pl-3 rounded-full border border-border/50 bg-background md:bg-card/30 backdrop-blur-md hover:bg-card/50 transition-all active:scale-[0.98] group"
         >
             <span
                 class="text-sm font-medium text-foreground/90 group-hover:text-foreground"
@@ -68,7 +68,7 @@ const handleLogout = async () => {
 
         <div
             v-if="isOpen"
-            class="absolute right-0 mt-2 w-56 p-1.5 rounded-xl border border-border/50 bg-card/90 backdrop-blur-xl shadow-2xl animate-in fade-in zoom-in-95 duration-200 z-50"
+            class="absolute right-0 mt-2 w-56 p-1.5 rounded-xl border border-border/50 bg-background backdrop-blur-xl shadow-2xl animate-in fade-in zoom-in-95 duration-200 z-50"
         >
             <div class="px-3 py-2 border-b border-border/30 mb-1">
                 <p
