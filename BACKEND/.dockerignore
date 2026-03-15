@@ -1,0 +1,28 @@
+# Rust build artifacts (can be several GB — always exclude)
+target/
+
+# Local environment secrets — never send to Docker daemon
+.env
+.env.*
+
+# Git history
+.git/
+.gitignore
+
+# Documentation files
+*.md
+HELP.md
+STEPS.md
+PROMPT_CONTEXT.md
+GEMINI.md
+USERS.md
+FRONTEND_API_REFERENCE.md
+
+# Editor / IDE
+.vscode/
+.idea/
+*.iml
+
+# OS noise
+.DS_Store
+Thumbs.db
