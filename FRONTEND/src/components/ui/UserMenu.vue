@@ -39,8 +39,16 @@ onUnmounted(() => {
 });
 
 const handleLogout = async () => {
-    await actions.logout();
-    window.location.href = "/";
+    try {
+        const { error } = await actions.logout();
+        if (error) {
+            console.error("Logout error:", error);
+        }
+    } catch (err) {
+        console.error("Unexpected logout error:", err);
+    } finally {
+        window.location.href = "/";
+    }
 };
 </script>
 
