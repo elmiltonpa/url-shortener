@@ -66,8 +66,16 @@ function setAuthCookies(cookies: AstroCookies, data: AuthResponse): void {
 }
 
 function clearAuthCookies(cookies: AstroCookies): void {
-  cookies.delete("auth_token", { path: "/" });
-  cookies.delete("user_data", { path: "/" });
+  const options = {
+    path: "/",
+    httpOnly: true,
+    secure: import.meta.env.PROD,
+    sameSite: "lax" as const,
+    expires: new Date(0),
+  };
+  
+  cookies.set("auth_token", "", options);
+  cookies.set("user_data", "", options);
 }
 
 export const server = {

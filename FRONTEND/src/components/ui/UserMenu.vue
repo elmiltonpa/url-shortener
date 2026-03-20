@@ -8,7 +8,6 @@ import {
     Home,
 } from "lucide-vue-next";
 import { actions } from "astro:actions";
-import Button from "./Button/Button.vue";
 
 const props = defineProps<{
     user: {
@@ -47,7 +46,7 @@ const handleLogout = async () => {
     } catch (err) {
         console.error("Unexpected logout error:", err);
     } finally {
-        window.location.href = "/";
+        window.location.replace("/");
     }
 };
 </script>
@@ -55,6 +54,7 @@ const handleLogout = async () => {
 <template>
     <div class="relative user-menu-container">
         <button
+            type="button"
             @click="toggleMenu"
             class="flex items-center gap-2 p-1.5 pl-3 rounded-full border border-border/50 bg-background md:bg-card/30 backdrop-blur-md hover:bg-card/50 transition-all active:scale-[0.98] group"
         >
@@ -106,7 +106,8 @@ const handleLogout = async () => {
             <div class="h-px bg-border/30 my-1 mx-1"></div>
 
             <button
-                @click="handleLogout"
+                type="button"
+                @click.prevent="handleLogout"
                 class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-destructive hover:bg-destructive/10 transition-colors"
             >
                 <LogOut class="w-4 h-4" />
