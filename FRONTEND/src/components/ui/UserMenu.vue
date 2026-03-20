@@ -36,25 +36,9 @@ onUnmounted(() => {
     window.removeEventListener("click", handleClickOutside);
 });
 
-const handleLogout = async () => {
-    try {
-        // Use the API endpoint instead of Astro Actions for better Vercel compatibility
-        const response = await fetch("/api/auth/logout", { method: "POST" });
-        
-        if (!response.ok) {
-            const text = await response.text();
-            console.error("Logout failed:", response.status, text);
-            alert(`Logout error: ${response.status} - ${text}`);
-            return; // Don't redirect on error
-        }
-        
-        // Success - redirect
-        window.location.href = "/";
-    } catch (err) {
-        console.error("Logout error:", err);
-        alert(`Logout network error: ${err}`);
-        // Don't redirect on error
-    }
+const handleLogout = () => {
+    // Use GET redirect - more reliable on Vercel (avoids CSRF 403 error)
+    window.location.href = "/api/auth/logout";
 };
 </script>
 
