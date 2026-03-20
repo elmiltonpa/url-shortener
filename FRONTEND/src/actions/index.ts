@@ -44,33 +44,13 @@ function getApiUrl(): string {
   return apiUrl;
 }
 
-// Base cookie options - domain is handled dynamically
-const BASE_COOKIE_OPTIONS = {
+const AUTH_COOKIE_OPTIONS = {
   path: "/",
   httpOnly: true,
   secure: import.meta.env.PROD,
   sameSite: "lax" as const,
+  maxAge: 60 * 60 * 24, // 24 hours
 };
-
-// Get cookie options with optional domain for production
-function getCookieOptions(maxAge: number = 60 * 60 * 24) {
-  const options: {
-    path: string;
-    httpOnly: boolean;
-    secure: boolean;
-    sameSite: "lax";
-    maxAge: number;
-    domain?: string;
-  } = {
-    ...BASE_COOKIE_OPTIONS,
-    maxAge,
-  };
-
-  // In production, we let the browser handle the domain automatically
-  // by not setting it explicitly - this ensures cookies work on any domain
-  // Vercel deployments will use the correct domain automatically
-  return options;
-}
 
 interface AuthResponse {
   token: string;
@@ -78,27 +58,8 @@ interface AuthResponse {
 }
 
 function setAuthCookies(cookies: AstroCookies, data: AuthResponse): void {
-  const options = getCookieOptions();
-  cookies.set("auth_token", data.token, options);
-  cookies.set("user_data", JSON.stringify(data.user), options);
-}
-
-function clearAuthCookies(cookies: AstroCookies): void {
-  // Instead of using cookies.delete(), we use cookies.set() with empty value
-  // and immediate expiration. This is more reliable in serverless environments
-  // like Vercel where cookies.delete() may not work as expected.
-  const expireOptions = {
-    path: "/",
-    httpOnly: true,
-    secure: import.meta.env.PROD,
-    sameSite: "lax" as const,
-    maxAge: 0,
-    expires: new Date(0),
-  };
-
-  // Set empty cookies that expire immediately - this overwrites and clears them
-  cookies.set("auth_token", "", expireOptions);
-  cookies.set("user_data", "", expireOptions);
+  cookies.set("auth_token", data.token, AUTH_COOKIE_OPTIONS);
+  cookies.set("user_data", JSON.stringify(data.user), AUTH_COOKIE_OPTIONS);
 }
 
 export const server = {
@@ -347,13 +308,6 @@ export const server = {
           message: "An unexpected error occurred during Google login",
         });
       }
-    },
-  }),
-
-  logout: defineAction({
-    handler: async (_, context) => {
-      clearAuthCookies(context.cookies);
-      return { success: true };
     },
   }),
 
