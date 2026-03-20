@@ -84,15 +84,21 @@ function setAuthCookies(cookies: AstroCookies, data: AuthResponse): void {
 }
 
 function clearAuthCookies(cookies: AstroCookies): void {
-  // IMPORTANT: Use the exact same options as setAuthCookies but with maxAge: 0
-  // This ensures the browser can match and delete the cookies correctly
-  const options = {
-    ...getCookieOptions(0),
-    expires: new Date(0), // Belt and suspenders - both maxAge and expires
+  // Instead of using cookies.delete(), we use cookies.set() with empty value
+  // and immediate expiration. This is more reliable in serverless environments
+  // like Vercel where cookies.delete() may not work as expected.
+  const expireOptions = {
+    path: "/",
+    httpOnly: true,
+    secure: import.meta.env.PROD,
+    sameSite: "lax" as const,
+    maxAge: 0,
+    expires: new Date(0),
   };
 
-  cookies.delete("auth_token", options);
-  cookies.delete("user_data", options);
+  // Set empty cookies that expire immediately - this overwrites and clears them
+  cookies.set("auth_token", "", expireOptions);
+  cookies.set("user_data", "", expireOptions);
 }
 
 export const server = {

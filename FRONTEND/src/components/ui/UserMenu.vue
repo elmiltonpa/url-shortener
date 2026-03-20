@@ -7,7 +7,6 @@ import {
     LayoutDashboard,
     Home,
 } from "lucide-vue-next";
-import { actions } from "astro:actions";
 
 const props = defineProps<{
     user: {
@@ -39,16 +38,23 @@ onUnmounted(() => {
 
 const handleLogout = async () => {
     try {
-        const result = await actions.logout();
-        if (result.error) {
-            console.error("Logout error:", result.error);
+        // Use the API endpoint instead of Astro Actions for better Vercel compatibility
+        const response = await fetch("/api/auth/logout", { method: "POST" });
+        
+        if (!response.ok) {
+            const text = await response.text();
+            console.error("Logout failed:", response.status, text);
+            alert(`Logout error: ${response.status} - ${text}`);
+            return; // Don't redirect on error
         }
+        
+        // Success - redirect
+        window.location.href = "/";
     } catch (err) {
-        console.error("Unexpected logout error:", err);
+        console.error("Logout error:", err);
+        alert(`Logout network error: ${err}`);
+        // Don't redirect on error
     }
-    // Always redirect - use href assignment for a full page reload
-    // This ensures cookies are re-read from scratch
-    window.location.href = "/";
 };
 </script>
 
