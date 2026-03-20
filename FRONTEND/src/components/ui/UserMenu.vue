@@ -39,15 +39,16 @@ onUnmounted(() => {
 
 const handleLogout = async () => {
     try {
-        const { error } = await actions.logout();
-        if (error) {
-            console.error("Logout error:", error);
+        const result = await actions.logout();
+        if (result.error) {
+            console.error("Logout error:", result.error);
         }
     } catch (err) {
         console.error("Unexpected logout error:", err);
-    } finally {
-        window.location.replace("/");
     }
+    // Always redirect - use href assignment for a full page reload
+    // This ensures cookies are re-read from scratch
+    window.location.href = "/";
 };
 </script>
 
